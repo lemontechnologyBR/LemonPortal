@@ -1,0 +1,304 @@
+{
+  "name": "Watch Brasil — obter token",
+  "meta": {
+    "description": "GET e POST /webhook/watch-brasil. Sem code: POST authenticate. Com code: troca token + salva no Lemon Portal."
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "watch-brasil",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-get",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "watch-brasil-get"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "watch-brasil",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-post",
+      "name": "Webhook POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 600],
+      "webhookId": "watch-brasil-post"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first().json;\nconst code = String(item.query?.code || item.body?.code || '').trim();\nreturn [{ json: { _code: code, _hasCode: !!code, _source: 'GET' } }];"
+      },
+      "id": "parse-get",
+      "name": "Parse GET",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first().json;\nconst code = String(item.query?.code || item.body?.code || '').trim();\nreturn [{ json: { _code: code, _hasCode: !!code, _source: 'POST', _rawBody: item.body, _rawQuery: item.query } }];"
+      },
+      "id": "parse-post",
+      "name": "Parse POST",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 },
+          "conditions": [{ "id": "c1", "leftValue": "={{ $json._hasCode }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-get",
+      "name": "GET tem code?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose", "version": 2 },
+          "conditions": [{ "id": "c2", "leftValue": "={{ $json._hasCode }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-post",
+      "name": "POST tem code?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apiweb.watch.tv.br/oauth/token",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "client_id", "value": "3754b650a243f" },
+            { "name": "client_secret", "value": "9c962db3c265a" },
+            { "name": "code", "value": "={{ $json._code }}" },
+            { "name": "grant_type", "value": "password" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 25000 }
+      },
+      "id": "http-token-g",
+      "name": "Token (GET)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apiweb.watch.tv.br/oauth/token",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "client_id", "value": "3754b650a243f" },
+            { "name": "client_secret", "value": "9c962db3c265a" },
+            { "name": "code", "value": "={{ $json._code }}" },
+            { "name": "grant_type", "value": "password" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 25000 }
+      },
+      "id": "http-token-p",
+      "name": "Token (POST)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d = $input.first().json;\nconst body = d.body || d;\nlet at = String(body.access_token || body.accessToken || '').trim();\nif (!at && body.Result) {\n  const res = Array.isArray(body.Result) ? body.Result[0] : body.Result;\n  if (res) at = String(res.access_token || res.accessToken || '').trim();\n}\nif (!at && body.result) {\n  const res = Array.isArray(body.result) ? body.result[0] : body.result;\n  if (res) at = String(res.access_token || res.accessToken || '').trim();\n}\nreturn [{ json: { _accessToken: at, _fullResponse: d } }];"
+      },
+      "id": "extract-g",
+      "name": "Extrair token GET",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d = $input.first().json;\nconst body = d.body || d;\nlet at = String(body.access_token || body.accessToken || '').trim();\nif (!at && body.Result) {\n  const res = Array.isArray(body.Result) ? body.Result[0] : body.Result;\n  if (res) at = String(res.access_token || res.accessToken || '').trim();\n}\nif (!at && body.result) {\n  const res = Array.isArray(body.result) ? body.result[0] : body.result;\n  if (res) at = String(res.access_token || res.accessToken || '').trim();\n}\nreturn [{ json: { _accessToken: at, _fullResponse: d } }];"
+      },
+      "id": "extract-p",
+      "name": "Extrair token POST",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://transperitoneal-malcontentedly-genna.ngrok-free.dev/portal/watch/oauth/save-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Watch-Code-Secret", "value": "lemon_watch_secret_2026" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ accessToken: $json._accessToken }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "save-g",
+      "name": "Salvar no Lemon (GET)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://transperitoneal-malcontentedly-genna.ngrok-free.dev/portal/watch/oauth/save-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Watch-Code-Secret", "value": "lemon_watch_secret_2026" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ accessToken: $json._accessToken }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "save-p",
+      "name": "Salvar no Lemon (POST)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 500],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ ok: true, token_salvo: !!$('Extrair token GET').first().json._accessToken, resposta_watch: $('Extrair token GET').first().json._fullResponse }, null, 2) }}",
+        "options": { "responseCode": 200, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "rs-tok-g",
+      "name": "Resp GET",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ ok: true, token_salvo: !!$('Extrair token POST').first().json._accessToken, resposta_watch: $('Extrair token POST').first().json._fullResponse }, null, 2) }}",
+        "options": { "responseCode": 200, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "rs-tok-p",
+      "name": "Resp POST",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apiweb.watch.tv.br/watch/v1/oauth/authenticate",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "client_id", "value": "3754b650a243f" },
+            { "name": "redirect_url", "value": "https://n8n.lemontech.cloud/webhook/watch-brasil" },
+            { "name": "approval_prompt", "value": "auto" },
+            { "name": "uid", "value": "3754b650a243f" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 25000 }
+      },
+      "id": "http-auth",
+      "name": "POST authenticate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ status: 'Autenticação enviada à Watch. O token será salvo automaticamente no Lemon Portal quando a Watch responder com o code. Verifique as execuções no n8n.', resposta_watch: $json }, null, 2) }}",
+        "options": { "responseCode": 200, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "rs-auth",
+      "name": "Resp auth",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ info: 'Watch chamou POST sem code', body: $json._rawBody, query: $json._rawQuery }, null, 2) }}",
+        "options": { "responseCode": 200, "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json; charset=utf-8" }] } }
+      },
+      "id": "rs-log",
+      "name": "Log POST sem code",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 740]
+    }
+  ],
+  "connections": {
+    "Webhook GET": { "main": [[ { "node": "Parse GET", "type": "main", "index": 0 } ]] },
+    "Webhook POST": { "main": [[ { "node": "Parse POST", "type": "main", "index": 0 } ]] },
+    "Parse GET": { "main": [[ { "node": "GET tem code?", "type": "main", "index": 0 } ]] },
+    "Parse POST": { "main": [[ { "node": "POST tem code?", "type": "main", "index": 0 } ]] },
+    "GET tem code?": {
+      "main": [
+        [ { "node": "Token (GET)", "type": "main", "index": 0 } ],
+        [ { "node": "POST authenticate", "type": "main", "index": 0 } ]
+      ]
+    },
+    "POST tem code?": {
+      "main": [
+        [ { "node": "Token (POST)", "type": "main", "index": 0 } ],
+        [ { "node": "Log POST sem code", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Token (GET)": { "main": [[ { "node": "Extrair token GET", "type": "main", "index": 0 } ]] },
+    "Token (POST)": { "main": [[ { "node": "Extrair token POST", "type": "main", "index": 0 } ]] },
+    "Extrair token GET": { "main": [[ { "node": "Salvar no Lemon (GET)", "type": "main", "index": 0 } ]] },
+    "Extrair token POST": { "main": [[ { "node": "Salvar no Lemon (POST)", "type": "main", "index": 0 } ]] },
+    "Salvar no Lemon (GET)": { "main": [[ { "node": "Resp GET", "type": "main", "index": 0 } ]] },
+    "Salvar no Lemon (POST)": { "main": [[ { "node": "Resp POST", "type": "main", "index": 0 } ]] },
+    "POST authenticate": { "main": [[ { "node": "Resp auth", "type": "main", "index": 0 } ]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "versionId": "4"
+}

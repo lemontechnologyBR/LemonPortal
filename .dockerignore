@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log*
+.env
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/vapid.json
+.git
+.gitignore
+*.md
+*.log
+.DS_Store
+Lemon Technology.png
+mikrotik-test.js
+scripts/watch-api-smoke.js
+src/

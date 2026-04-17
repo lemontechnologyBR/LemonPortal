@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lemon Technology - Portal do Cliente</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1a5d77" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Lemon" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" href="/icons/lemon-logo.png" type="image/png" />
+</head>
+<body>
+
+  <!-- ===== LANDING (#page-landing) — home pública ===== -->
+  <div id="page-landing" class="page active">
+    <div class="home-wrap">
+      <div class="aurora"></div>
+      <div class="aurora aurora-2"></div>
+      <div class="grid-bg"></div>
+
+      <div class="home-logo">
+        <div class="logo-icon brand-logo" aria-hidden="true">
+          <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+        </div>
+        <h1>Lemon Technology</h1>
+        <p>Sua solução em tecnologia</p>
+      </div>
+
+      <div class="home-btns">
+        <button class="home-btn home-btn-primary" onclick="irParaLogin()">
+          <div class="home-btn-icon"><i class="fa-solid fa-circle-user"></i></div>
+          <div class="home-btn-text">
+            <span>Já sou cliente</span>
+            <small>Acessar minha conta</small>
+          </div>
+          <i class="fa-solid fa-chevron-right home-btn-arrow"></i>
+        </button>
+
+        <button class="home-btn home-btn-outline" onclick="irParaEscolhaRegiao()">
+          <div class="home-btn-icon"><i class="fa-solid fa-user-plus"></i></div>
+          <div class="home-btn-text">
+            <span>Não sou cliente</span>
+            <small>Quero contratar um plano</small>
+          </div>
+          <i class="fa-solid fa-chevron-right home-btn-arrow"></i>
+        </button>
+      </div>
+
+      <div id="pwa-install-wrap" class="pwa-install-wrap hidden">
+        <button id="pwa-install-btn" class="pwa-install-btn" onclick="instalarApp()">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+          <span>Instalar App</span>
+          <i class="fa-solid fa-arrow-down pwa-arrow"></i>
+        </button>
+      </div>
+
+      <p class="home-footer">© 2026 Lemon Technology</p>
+    </div>
+  </div>
+
+  <!-- ===== REGIÃO / CONDOMÍNIO (antes dos planos — captação) ===== -->
+  <div id="page-regiao" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarLanding()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:28px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.35rem;font-weight:800;margin-bottom:8px">Onde você mora?</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:360px">
+            Antes de ver os planos, escolha onde você mora para confirmarmos cobertura Lemon no seu endereço.
+          </p>
+        </div>
+        <div class="regiao-escolha-btns">
+          <button type="button" class="home-btn home-btn-primary" onclick="confirmarRegiaoContratacao('Real Parque')">
+            <div class="home-btn-icon"><i class="fa-solid fa-building"></i></div>
+            <div class="home-btn-text">
+              <span>Real Parque</span>
+              <small>Condomínio nesta região</small>
+            </div>
+            <i class="fa-solid fa-chevron-right home-btn-arrow"></i>
+          </button>
+          <button type="button" class="home-btn home-btn-outline" onclick="confirmarRegiaoContratacao('Jardim Panorama')">
+            <div class="home-btn-icon"><i class="fa-solid fa-city"></i></div>
+            <div class="home-btn-text">
+              <span>Jardim Panorama</span>
+              <small>Casas nesta região</small>
+            </div>
+            <i class="fa-solid fa-chevron-right home-btn-arrow"></i>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/regiao-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REAL PARQUE — endereço (antes dos planos) ===== -->
+  <div id="page-realparque-enderecos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner rp-endereco-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarEnderecosRealParqueParaRegiao()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:8px">Real Parque — seu endereço</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:420px">
+            Selecione a rua ou referência mais próxima da sua residência no condomínio.
+          </p>
+        </div>
+        <div class="rp-endereco-list">
+          <button type="button" class="rp-endereco-btn" onclick="confirmarEnderecoRealParque(0)">
+            <span class="rp-endereco-txt">R. Paulo Bourroul — Real Parque, São Paulo — SP, 05686-050</span>
+            <i class="fa-solid fa-chevron-right rp-endereco-arrow"></i>
+          </button>
+          <button type="button" class="rp-endereco-btn" onclick="confirmarEnderecoRealParque(1)">
+            <span class="rp-endereco-txt">R. Conde de Itaguaí — Real Parque, São Paulo — SP, 05686-030</span>
+            <i class="fa-solid fa-chevron-right rp-endereco-arrow"></i>
+          </button>
+          <button type="button" class="rp-endereco-btn" onclick="confirmarEnderecoRealParque(2)">
+            <span class="rp-endereco-txt">R. Barão de Castro Lima — Real Parque, São Paulo — SP, 05685-040</span>
+            <i class="fa-solid fa-chevron-right rp-endereco-arrow"></i>
+          </button>
+          <button type="button" class="rp-endereco-btn" onclick="confirmarEnderecoRealParque(3)">
+            <span class="rp-endereco-txt">R. César Vallejo — Real Parque, São Paulo — SP, 04533-085</span>
+            <i class="fa-solid fa-chevron-right rp-endereco-arrow"></i>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/realparque-paper-map.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — condomínio (sub-etapa) ===== -->
+  <div id="page-bourroul-condominios" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarCondominioPauloBourroulParaRuas()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">R. Paulo Bourroul</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual destes condomínios você reside?
+          </p>
+        </div>
+        <div class="rp-azulejos-grid rp-azulejos-grid--condominios" role="group" aria-label="Condomínios">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="confirmarCondominioPauloBourroul('Azul 308')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+            <span class="rp-azulejo-nome">Azul 308</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo" onclick="confirmarCondominioPauloBourroul('Amarelo 280')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+            <span class="rp-azulejo-nome">Amarelo 280</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-lima rp-azulejo--condominio-destaque" onclick="irParaCingapuraLetra()">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+            <span class="rp-azulejo-nome">Cingapura</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — Cingapura: letra do bloco (B, C, D, E) ===== -->
+  <div id="page-bourroul-cingapura-letras" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-letras-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarCingapuraLetraParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">Cingapura</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Qual a letra do seu bloco?
+          </p>
+        </div>
+        <div class="cingapura-letras-grid" role="group" aria-label="Letra do bloco">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-lima" onclick="irParaCingapuraNumerosBloco('B')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cube"></i></span>
+            <span class="rp-azulejo-nome">Bloco B</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-lima" onclick="irParaCingapuraNumerosBloco('C')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cube"></i></span>
+            <span class="rp-azulejo-nome">Bloco C</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-lima" onclick="irParaCingapuraNumerosBloco('D')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cube"></i></span>
+            <span class="rp-azulejo-nome">Bloco D</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-lima" onclick="irParaCingapuraNumerosBloco('E')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cube"></i></span>
+            <span class="rp-azulejo-nome">Bloco E</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap cingapura-letras-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-building-blocks.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — Cingapura: número do bloco (B1–B9; C–E: 1–10) ===== -->
+  <div id="page-bourroul-cingapura-bloco-num" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-bloco-num-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarCingapuraNumerosBlocoParaLetra()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Cingapura</h2>
+          <p id="cingapura-bloco-num-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px">
+            Escolha o número do bloco (B: B1 a B9; demais letras: ex. C1 a C10).
+          </p>
+        </div>
+        <div id="cingapura-bloco-num-grid" class="cingapura-bloco-num-grid" role="group" aria-label="Número do bloco"></div>
+        <div class="regiao-ilustracao-wrap cingapura-bloco-num-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-building-blocks.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — Cingapura: apartamento (AP11 … AP62) ===== -->
+  <div id="page-bourroul-cingapura-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarCingapuraApartamentosParaNumerosBloco()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Cingapura</h2>
+          <p id="cingapura-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px">
+            12 apartamentos: 2 por andar (AP11, AP12 … AP61, AP62).
+          </p>
+        </div>
+        <div id="cingapura-apts-grid" class="cingapura-apts-grid" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PLANOS (#page-planos) — escolha de plano / captação ===== -->
+  <div id="page-planos" class="page hidden">
+    <div class="login-bg" style="align-items:flex-start;padding:32px 20px">
+      <div style="width:100%;max-width:680px;margin:0 auto">
+
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarDePlanosOuLanding()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+
+        <div style="text-align:center;margin-bottom:32px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:6px">Escolha seu plano</h2>
+          <p id="planos-regiao-label" class="planos-regiao-label hidden"></p>
+          <p id="planos-endereco-rp" class="planos-endereco-rp hidden"></p>
+          <p style="color:var(--text-muted);font-size:0.88rem">Todos com fibra óptica, Wi-Fi incluso e suporte técnico</p>
+        </div>
+
+        <div class="planos-escolha">
+
+          <!-- Lemon Smart -->
+          <div class="plano-escolha-card" onclick="irParaCadastro('Lemon Smart')">
+            <div class="plano-escolha-top">
+              <div class="plano-escolha-left">
+                <div class="plano-escolha-nome">Lemon Smart</div>
+                <div class="plano-escolha-vel">300 <span>Mbps</span></div>
+              </div>
+              <div class="plano-escolha-preco">
+                <strong>R$ 79,99</strong>
+                <span>/mês</span>
+              </div>
+              <i class="fa-solid fa-chevron-right plano-escolha-arrow"></i>
+            </div>
+            <div class="plano-escolha-itens">
+              <span><i class="fa-solid fa-check"></i> Fibra óptica</span>
+              <span><i class="fa-solid fa-check"></i> Roteador Wi-Fi 5 incluso</span>
+              <span><i class="fa-solid fa-check"></i> IP fixo</span>
+              <span><i class="fa-solid fa-check"></i> Suporte 24h</span>
+              <span><i class="fa-solid fa-check"></i> Instalação grátis</span>
+            </div>
+          </div>
+
+          <!-- Lemon Plus -->
+          <div class="plano-escolha-card plano-escolha-destaque" onclick="irParaCadastro('Lemon Plus')">
+            <div class="plano-escolha-badge">Mais Popular</div>
+            <div class="plano-escolha-top">
+              <div class="plano-escolha-left">
+                <div class="plano-escolha-nome">Lemon Plus</div>
+                <div class="plano-escolha-vel">500 <span>Mbps</span></div>
+              </div>
+              <div class="plano-escolha-preco">
+                <strong>R$ 109,99</strong>
+                <span>/mês</span>
+              </div>
+              <i class="fa-solid fa-chevron-right plano-escolha-arrow"></i>
+            </div>
+            <div class="plano-escolha-itens">
+              <span><i class="fa-solid fa-check"></i> Fibra óptica</span>
+              <span><i class="fa-solid fa-check"></i> Roteador Wi-Fi 5 incluso</span>
+              <span><i class="fa-solid fa-check"></i> IP fixo</span>
+              <span><i class="fa-solid fa-check"></i> Suporte 24h prioritário</span>
+              <span><i class="fa-solid fa-check"></i> Sem fidelidade</span>
+              <span><i class="fa-solid fa-check"></i> Instalação grátis</span>
+            </div>
+          </div>
+
+          <!-- Lemon Max -->
+          <div class="plano-escolha-card" onclick="irParaCadastro('Lemon Max')">
+            <div class="plano-escolha-top">
+              <div class="plano-escolha-left">
+                <div class="plano-escolha-nome">Lemon Max</div>
+                <div class="plano-escolha-vel">700 <span>Mbps</span></div>
+              </div>
+              <div class="plano-escolha-preco">
+                <strong>R$ 129,99</strong>
+                <span>/mês</span>
+              </div>
+              <i class="fa-solid fa-chevron-right plano-escolha-arrow"></i>
+            </div>
+            <div class="plano-escolha-itens">
+              <span><i class="fa-solid fa-check"></i> Fibra óptica</span>
+              <span><i class="fa-solid fa-check"></i> Roteador Wi-Fi 6 incluso</span>
+              <span><i class="fa-solid fa-check"></i> IP fixo</span>
+              <span><i class="fa-solid fa-check"></i> Suporte 24h prioritário</span>
+              <span><i class="fa-solid fa-check"></i> Sem fidelidade</span>
+              <span><i class="fa-solid fa-check"></i> Instalação grátis</span>
+            </div>
+          </div>
+
+          <!-- Lemon X -->
+          <div class="plano-escolha-card" onclick="irParaCadastro('Lemon X')">
+            <div class="plano-escolha-badge plano-badge-gold">Top</div>
+            <div class="plano-escolha-top">
+              <div class="plano-escolha-left">
+                <div class="plano-escolha-nome">Lemon X</div>
+                <div class="plano-escolha-vel">1 <span>Gbps</span></div>
+              </div>
+              <div class="plano-escolha-preco">
+                <strong>R$ 139,99</strong>
+                <span>/mês</span>
+              </div>
+              <i class="fa-solid fa-chevron-right plano-escolha-arrow"></i>
+            </div>
+            <div class="plano-escolha-itens">
+              <span><i class="fa-solid fa-check"></i> Fibra óptica Gigabit</span>
+              <span><i class="fa-solid fa-check"></i> Roteador Wi-Fi 6 AX incluso</span>
+              <span><i class="fa-solid fa-check"></i> IP fixo</span>
+              <span><i class="fa-solid fa-check"></i> Suporte VIP 24h</span>
+              <span><i class="fa-solid fa-check"></i> Sem fidelidade</span>
+              <span><i class="fa-solid fa-check"></i> Instalação grátis</span>
+              <span><i class="fa-solid fa-check"></i> SLA garantido</span>
+            </div>
+          </div>
+
+        </div>
+
+        <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:20px;opacity:.6">
+          Toque no plano para continuar o cadastro
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CADASTRO (#page-cadastro) — wizard novo cliente ===== -->
+  <div id="page-cadastro" class="page hidden">
+    <div class="login-bg">
+      <div class="login-card cadastro-card">
+
+        <div class="login-logo">
+          <div class="logo-icon brand-logo" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <div>
+            <h1>Lemon Technology</h1>
+            <p>Cadastro de novo cliente</p>
+          </div>
+        </div>
+
+        <!-- Steps indicator -->
+        <div class="steps-indicator">
+          <div class="step active" id="step-ind-1"><span>1</span><small>Pessoal</small></div>
+          <div class="step-line"></div>
+          <div class="step" id="step-ind-2"><span>2</span><small>Endereço</small></div>
+          <div class="step-line"></div>
+          <div class="step" id="step-ind-3"><span>3</span><small>Acesso</small></div>
+        </div>
+
+        <!-- ETAPA 1 — Dados pessoais -->
+        <div id="cad-step-1" class="cad-step">
+          <div class="field-group">
+            <label><i class="fa-solid fa-user"></i> Nome completo <span class="req">*</span></label>
+            <input type="text" id="cad-nome" placeholder="Nome e sobrenome" required />
+          </div>
+          <div class="field-group">
+            <label><i class="fa-solid fa-id-card"></i> CPF <span class="req">*</span></label>
+            <input type="text" id="cad-cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required />
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label><i class="fa-solid fa-cake-candles"></i> Data de nascimento</label>
+              <input type="text" id="cad-nasc" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric" />
+            </div>
+            <div class="field-group">
+              <label><i class="fa-solid fa-envelope"></i> E-mail</label>
+              <input type="email" id="cad-email" placeholder="seu@email.com" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label><i class="fa-brands fa-whatsapp"></i> WhatsApp</label>
+            <input type="text" id="cad-tel" placeholder="(XX) XXXXX-XXXX" maxlength="16" inputmode="numeric" />
+          </div>
+          <div id="cad-err-1" class="alert alert-error hidden"></div>
+          <div class="cad-nav">
+            <button type="button" class="btn btn-ghost" onclick="voltarLanding()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+            <button type="button" class="btn btn-primary" onclick="cadNext(1)">
+              Próximo <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ETAPA 2 — Endereço -->
+        <div id="cad-step-2" class="cad-step hidden">
+          <div class="field-row">
+            <div class="field-group">
+              <label><i class="fa-solid fa-location-dot"></i> CEP <span class="req">*</span></label>
+              <input type="text" id="cad-cep" placeholder="00000-000" maxlength="9" inputmode="numeric" oninput="buscarCep(this)" />
+            </div>
+            <div class="field-group">
+              <label><i class="fa-solid fa-road"></i> Endereço <span class="req">*</span></label>
+              <input type="text" id="cad-end" placeholder="Rua, Avenida..." required />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Número <span class="req">*</span></label>
+              <input type="text" id="cad-num" placeholder="Nº" required />
+            </div>
+            <div class="field-group">
+              <label>Complemento</label>
+              <input type="text" id="cad-comp" placeholder="Apto, Bloco..." />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Bairro <span class="req">*</span></label>
+              <input type="text" id="cad-bairro" placeholder="Bairro" required />
+            </div>
+            <div class="field-group">
+              <label>Cidade <span class="req">*</span></label>
+              <input type="text" id="cad-cidade" placeholder="Cidade" required />
+            </div>
+          </div>
+          <div class="field-group" style="max-width:120px">
+            <label>Estado <span class="req">*</span></label>
+            <select id="cad-estado">
+              <option value="">UF</option>
+              <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+              <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+              <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+              <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+              <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+              <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+              <option selected>SP</option><option>SE</option><option>TO</option>
+            </select>
+          </div>
+          <div id="cad-err-2" class="alert alert-error hidden"></div>
+          <div class="cad-nav">
+            <button type="button" class="btn btn-ghost" onclick="cadBack(2)">
+              <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+            <button type="button" class="btn btn-primary" onclick="cadNext(2)">
+              Próximo <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ETAPA 3 — Acesso + Plano -->
+        <div id="cad-step-3" class="cad-step hidden">
+          <div class="field-group">
+            <label><i class="fa-solid fa-bolt"></i> Plano desejado <span class="req">*</span></label>
+            <select id="cad-plano">
+              <option value="Lemon_Smart">Lemon Smart – 300 Mbps – R$ 79,99</option>
+              <option value="Lemon_Plus" selected>Lemon Plus – 500 Mbps – R$ 109,99</option>
+              <option value="Lemon_Max">Lemon Max – 700 Mbps – R$ 129,99</option>
+              <option value="Lemon_X">Lemon X – 1 Gbps – R$ 139,99</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label><i class="fa-solid fa-at"></i> Login de acesso <span class="req">*</span></label>
+            <input type="text" id="cad-login" placeholder="Será usado para acessar o portal" required />
+            <span class="field-hint">Gerado automaticamente — pode editar</span>
+          </div>
+          <div class="field-group">
+            <label><i class="fa-solid fa-lock"></i> Senha <span class="req">*</span></label>
+            <div class="input-pass">
+              <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres" required minlength="6" />
+              <button type="button" class="toggle-pass" onclick="togglePassCad()">
+                <i class="fa-solid fa-eye" id="eye-cad"></i>
+              </button>
+            </div>
+          </div>
+          <div class="field-group">
+            <label><i class="fa-solid fa-lock"></i> Confirmar senha <span class="req">*</span></label>
+            <input type="password" id="cad-senha2" placeholder="Repita a senha" required />
+          </div>
+          <div id="cad-err-3" class="alert alert-error hidden"></div>
+          <div class="cad-nav">
+            <button type="button" class="btn btn-ghost" onclick="cadBack(3)">
+              <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-cadastrar" onclick="enviarCadastro()">
+              <i class="fa-solid fa-check"></i> Finalizar cadastro
+            </button>
+          </div>
+        </div>
+
+        <!-- ETAPA 4 — Sucesso -->
+        <div id="cad-step-4" class="cad-step hidden" style="text-align:center;padding:20px 0">
+          <div style="font-size:3rem;color:var(--lemon);margin-bottom:16px">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <h3 style="font-size:1.2rem;margin-bottom:8px">Cadastro enviado!</h3>
+          <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:24px;line-height:1.6">
+            Seu cadastro foi registrado com sucesso.<br/>
+            Nossa equipe irá ativar sua conta em breve.
+          </p>
+          <button class="btn btn-primary btn-full" onclick="irParaLogin()">
+            <i class="fa-solid fa-right-to-bracket"></i> Ir para o login
+          </button>
+          <button class="btn btn-ghost btn-full" style="margin-top:10px" onclick="voltarLanding()">
+            Voltar ao início
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LOGIN (#page-login) — CPF + senha ===== -->
+  <div id="page-login" class="page hidden">
+    <div class="login-bg">
+      <div class="login-inner">
+        <div class="login-card">
+        <div class="login-logo">
+          <div class="logo-icon brand-logo" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <div>
+            <h1>Lemon Technology</h1>
+            <p>Portal do Cliente</p>
+          </div>
+        </div>
+        <form id="form-login">
+          <div class="field-group">
+            <label><i class="fa-solid fa-id-card"></i> CPF</label>
+            <input type="text" id="cpf-input" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" required />
+          </div>
+          <div id="login-error" class="alert alert-error hidden"></div>
+          <button type="submit" class="btn btn-primary btn-full" id="btn-login">
+            <span>Entrar</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+        <button type="button" class="login-back-btn" onclick="irParaPlanos()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar aos planos
+        </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PORTAL (#page-portal) — app autenticado (views internas) ===== -->
+  <div id="page-portal" class="page hidden">
+
+    <!-- Main (sem sidebar) -->
+    <div class="main-wrapper">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <button class="topbar-back hidden" id="btn-back" onclick="navTo('dashboard')">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <div class="topbar-brand" id="topbar-brand">
+          <div class="logo-icon sm brand-logo" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+        </div>
+        <div class="topbar-title hidden" id="topbar-title"></div>
+        <div class="topbar-user" onclick="navTo('perfil')" style="cursor:pointer">
+          <div class="user-avatar-top" id="topbar-avatar">?</div>
+          <span id="topbar-nome">Carregando...</span>
+        </div>
+      </header>
+
+      <!-- Content Area -->
+      <main class="content">
+
+        <!-- ===== DASHBOARD ===== -->
+        <div id="view-dashboard" class="view active">
+
+          <!-- Hero de boas-vindas -->
+          <div class="dash-hero">
+            <div class="dash-hero-left">
+              <div class="dash-greeting">Olá,</div>
+              <div class="dash-hero-name" id="dash-nome">cliente</div>
+              <div class="dash-hero-sub" id="dash-hero-sub">Bem-vindo ao seu portal</div>
+            </div>
+            <div class="dash-hero-right">
+              <div class="dash-status-pill" id="dash-status-pill">
+                <span class="dash-status-dot" id="dash-status-dot"></span>
+                <span id="dash-status">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats rápidos -->
+          <div class="dash-stats">
+            <div class="dash-stat-card" onclick="navTo('faturas')">
+              <div class="dash-stat-icon" style="background:rgba(251,146,60,0.12);border-color:rgba(251,146,60,0.2)">
+                <i class="fa-solid fa-receipt" style="color:#fb923c"></i>
+              </div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Em Aberto</div>
+                <div class="dash-stat-value" id="dash-faturas">0</div>
+              </div>
+            </div>
+            <div class="dash-stat-card" onclick="navTo('faturas')">
+              <div class="dash-stat-icon" style="background:rgba(96,165,250,0.12);border-color:rgba(96,165,250,0.2)">
+                <i class="fa-solid fa-calendar-days" style="color:#60a5fa"></i>
+              </div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Vencimento</div>
+                <div class="dash-stat-value" id="dash-venc">--</div>
+              </div>
+            </div>
+            <div class="dash-stat-card" onclick="navTo('indicacoes')">
+              <div class="dash-stat-icon" style="background:rgba(182,195,63,0.12);border-color:rgba(182,195,63,0.2)">
+                <i class="fa-solid fa-star" style="color:var(--lemon)"></i>
+              </div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Pontos</div>
+                <div class="dash-stat-value" id="dash-pontos-stat">--</div>
+              </div>
+            </div>
+            <div class="dash-stat-card" onclick="navTo('faturas')">
+              <div class="dash-stat-icon" style="background:rgba(74,222,128,0.12);border-color:rgba(74,222,128,0.2)">
+                <i class="fa-solid fa-bolt" style="color:#4ade80"></i>
+              </div>
+              <div class="dash-stat-body">
+                <div class="dash-stat-label">Plano</div>
+                <div class="dash-stat-value" id="dash-plano">--</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grade de navegação principal -->
+          <div class="dash-section-label">Serviços</div>
+          <div class="dash-tiles">
+            <button class="dash-tile" onclick="navTo('faturas')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+              </div>
+              <span class="dash-tile-label">Minhas Faturas</span>
+              <span class="dash-tile-badge hidden" id="tile-badge-faturas">0</span>
+            </button>
+
+            <button class="dash-tile" onclick="navTo('conexao')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-wifi"></i>
+              </div>
+              <span class="dash-tile-label">Minha Conexão</span>
+              <span class="conn-dot" id="nav-conn-dot" style="position:absolute;top:10px;right:10px"></span>
+            </button>
+
+            <button class="dash-tile" onclick="navTo('velocidade')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-gauge-high"></i>
+              </div>
+              <span class="dash-tile-label">Teste de Velocidade</span>
+            </button>
+
+            <button class="dash-tile" onclick="navTo('watch')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-tv"></i>
+              </div>
+              <span class="dash-tile-label">Watch TV</span>
+            </button>
+
+            <button class="dash-tile" onclick="navTo('suporte')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-headset"></i>
+              </div>
+              <span class="dash-tile-label">Suporte</span>
+            </button>
+
+            <button class="dash-tile" onclick="navTo('indicacoes')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-star"></i>
+              </div>
+              <span class="dash-tile-label">Lemon Club</span>
+              <span class="dash-tile-pts hidden" id="tile-pts">0 pts</span>
+            </button>
+
+            <button class="dash-tile" onclick="navTo('notificacoes')">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-bell"></i>
+              </div>
+              <span class="dash-tile-label">Notificações</span>
+            </button>
+
+            <button class="dash-tile" onclick="instalarApp()">
+              <div class="dash-tile-icon">
+                <i class="fa-solid fa-mobile-screen"></i>
+              </div>
+              <span class="dash-tile-label">Instalar App</span>
+            </button>
+          </div>
+
+          <div class="dash-section-label" style="margin-top:24px"><i class="fa-solid fa-bullhorn" style="margin-right:6px;opacity:.7"></i>Avisos e próximo vencimento</div>
+          <div id="dash-vencimento-banner" class="dash-vencimento-banner dash-vencimento-banner--loading">
+            <div class="spinner" style="margin:14px auto"></div>
+          </div>
+          <div id="dash-avisos" class="dash-avisos hidden"></div>
+
+          <div class="dash-section-label" style="margin-top:24px"><i class="fa-solid fa-newspaper" style="margin-right:6px;opacity:.7"></i>Notícias</div>
+          <div id="dash-noticias" class="dash-noticias">
+            <div class="spinner" style="margin:16px auto"></div>
+          </div>
+          <div class="dash-section-label" style="margin-top:24px"><i class="fa-solid fa-cloud-sun" style="margin-right:6px;opacity:.7"></i>Clima</div>
+          <div id="dash-clima" class="dash-clima">
+            <div class="spinner" style="margin:16px auto"></div>
+          </div>
+
+          <div class="dash-util-segment">
+            <div class="dash-section-label" style="margin-top:24px"><i class="fa-solid fa-coins" style="margin-right:6px;opacity:.7"></i>Cotação</div>
+            <div id="dash-cotacao" class="dash-cotacao-card">
+              <div class="spinner" style="margin:14px auto"></div>
+            </div>
+          </div>
+          <div class="dash-util-segment">
+            <div class="dash-section-label" style="margin-top:24px"><i class="fa-solid fa-calendar-days" style="margin-right:6px;opacity:.7"></i>Feriados</div>
+            <div id="dash-feriados" class="dash-feriados-card">
+              <div class="spinner" style="margin:14px auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== FATURAS ===== -->
+        <div id="view-faturas" class="view hidden">
+          <div class="page-header">
+            <h2><i class="fa-solid fa-file-invoice-dollar"></i> Faturas</h2>
+            <p>Gerencie suas cobranças e pagamentos</p>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="abertas" onclick="switchTab(this, 'abertas')">
+              <i class="fa-solid fa-clock"></i> Em Aberto
+            </button>
+            <button class="tab" data-tab="vencidas" onclick="switchTab(this, 'vencidas')">
+              <i class="fa-solid fa-triangle-exclamation"></i> Vencidas
+            </button>
+            <button class="tab" data-tab="pagas" onclick="switchTab(this, 'pagas')">
+              <i class="fa-solid fa-circle-check"></i> Pagas
+            </button>
+          </div>
+
+          <div id="tab-abertas" class="tab-content active">
+            <div id="lista-abertas" class="list-placeholder"><div class="spinner"></div></div>
+          </div>
+          <div id="tab-vencidas" class="tab-content hidden">
+            <div id="lista-vencidas" class="list-placeholder"><div class="spinner"></div></div>
+          </div>
+          <div id="tab-pagas" class="tab-content hidden">
+            <div id="lista-pagas" class="list-placeholder"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- ===== SUPORTE ===== -->
+        <div id="view-suporte" class="view hidden">
+          <div class="page-header">
+            <h2><i class="fa-solid fa-headset"></i> Suporte</h2>
+            <p>Abra e acompanhe seus atendimentos</p>
+          </div>
+          <div class="grid-2col">
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-plus-circle"></i> Abrir Chamado</h3>
+              </div>
+              <form id="form-chamado">
+                <div class="field-group">
+                  <label>Assunto</label>
+                  <select id="chamado-assunto">
+                    <option value="Conexão">Conexão</option>
+                    <option value="Financeiro">Financeiro</option>
+                    <option value="Cadastro">Cadastro</option>
+                    <option value="Dúvidas">Dúvidas</option>
+                    <option value="Crítica">Crítica</option>
+                    <option value="Sugestão">Sugestão</option>
+                    <option value="Cancelamento">Cancelamento</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label>Prioridade</label>
+                  <select id="chamado-prioridade">
+                    <option value="baixa">Baixa</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label>Mensagem</label>
+                  <textarea id="chamado-mensagem" rows="4" placeholder="Descreva seu problema ou dúvida..."></textarea>
+                </div>
+                <div id="chamado-feedback" class="alert hidden"></div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-paper-plane"></i> Enviar Chamado
+                </button>
+              </form>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-list-check"></i> Meus Chamados</h3>
+              </div>
+              <div id="lista-chamados" class="list-placeholder"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== CONEXÃO ===== -->
+        <div id="view-conexao" class="view hidden">
+          <div class="page-header">
+            <h2><i class="fa-solid fa-wifi"></i> Minha Conexão</h2>
+            <p>Status em tempo real da sua conexão com a rede Lemon</p>
+          </div>
+
+          <!-- Status principal -->
+          <div class="conn-hero" id="conn-hero">
+            <div class="conn-hero-glow" id="conn-hero-glow"></div>
+
+            <div class="conn-status-row">
+              <div class="conn-status-badge" id="conn-status-badge">
+                <span class="conn-status-dot" id="conn-status-dot"></span>
+                <span id="conn-status-text">Verificando...</span>
+              </div>
+              <div class="conn-uptime" id="conn-uptime"></div>
+            </div>
+
+            <div class="conn-info-grid">
+              <div class="conn-info-item">
+                <i class="fa-solid fa-network-wired"></i>
+                <div>
+                  <div class="conn-info-label">Endereço IP</div>
+                  <div class="conn-info-val" id="conn-ip">—</div>
+                </div>
+              </div>
+              <div class="conn-info-item">
+                <i class="fa-solid fa-ethernet"></i>
+                <div>
+                  <div class="conn-info-label">MAC / Roteador</div>
+                  <div class="conn-info-val" id="conn-mac">—</div>
+                </div>
+              </div>
+              <div class="conn-info-item">
+                <i class="fa-solid fa-user"></i>
+                <div>
+                  <div class="conn-info-label">Login PPPoE</div>
+                  <div class="conn-info-val" id="conn-login">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Velocidade em tempo real -->
+          <div class="conn-speed-row">
+            <div class="conn-speed-card">
+              <div class="conn-speed-icon" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.2)">
+                <i class="fa-solid fa-arrow-down" style="color:#818cf8"></i>
+              </div>
+              <div class="conn-speed-info">
+                <div class="conn-speed-label">Download atual</div>
+                <div class="conn-speed-val" id="conn-dl-rate">—</div>
+              </div>
+              <div class="conn-speed-max" id="conn-dl-max"></div>
+            </div>
+            <div class="conn-speed-card">
+              <div class="conn-speed-icon" style="background:rgba(182,195,63,0.1);border-color:rgba(182,195,63,0.2)">
+                <i class="fa-solid fa-arrow-up" style="color:var(--lemon)"></i>
+              </div>
+              <div class="conn-speed-info">
+                <div class="conn-speed-label">Upload atual</div>
+                <div class="conn-speed-val" id="conn-ul-rate">—</div>
+              </div>
+              <div class="conn-speed-max" id="conn-ul-max"></div>
+            </div>
+          </div>
+
+          <!-- Consumo da sessão -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-chart-area"></i> Consumo na sessão atual</h3>
+              <span class="conn-refresh-label" id="conn-refresh-label">
+                <i class="fa-solid fa-rotate" id="conn-spin"></i> ao vivo
+              </span>
+            </div>
+
+            <div class="conn-usage-row">
+              <div class="conn-usage-item">
+                <div class="conn-usage-label">
+                  <i class="fa-solid fa-arrow-down" style="color:#818cf8"></i> Baixado
+                </div>
+                <div class="conn-usage-val" id="conn-dl-bytes">—</div>
+                <div class="conn-usage-bar-wrap">
+                  <div class="conn-usage-bar" style="background:rgba(99,102,241,0.15)">
+                    <div class="conn-usage-fill" id="conn-dl-bar" style="background:linear-gradient(90deg,#6366f1,#818cf8)"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="conn-usage-item">
+                <div class="conn-usage-label">
+                  <i class="fa-solid fa-arrow-up" style="color:var(--lemon)"></i> Enviado
+                </div>
+                <div class="conn-usage-val" id="conn-ul-bytes">—</div>
+                <div class="conn-usage-bar-wrap">
+                  <div class="conn-usage-bar" style="background:rgba(182,195,63,0.08)">
+                    <div class="conn-usage-fill" id="conn-ul-bar" style="background:linear-gradient(90deg,var(--lemon-dark),var(--lemon))"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="conn-dropped" id="conn-dropped" style="display:none">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span id="conn-dropped-val">0</span> pacotes descartados nesta sessão
+            </div>
+          </div>
+
+          <!-- Comparação com plano -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-bolt"></i> Plano contratado</h3>
+            </div>
+            <div class="conn-plan-row">
+              <div class="conn-plan-item">
+                <div class="conn-plan-label"><i class="fa-solid fa-arrow-down" style="color:#818cf8"></i> Download</div>
+                <div class="conn-plan-val" id="conn-plan-dl">—</div>
+              </div>
+              <div class="conn-plan-divider"></div>
+              <div class="conn-plan-item">
+                <div class="conn-plan-label"><i class="fa-solid fa-arrow-up" style="color:var(--lemon)"></i> Upload</div>
+                <div class="conn-plan-val" id="conn-plan-ul">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== VELOCIDADE ===== -->
+        <div id="view-velocidade" class="view hidden">
+          <div class="page-header">
+            <h2><i class="fa-solid fa-gauge-high"></i> Teste de Velocidade</h2>
+            <p>Verifique a performance da sua conexão Lemon</p>
+          </div>
+
+          <!-- Speedometer -->
+          <div class="speed-card">
+            <div class="speed-gauge-wrap">
+              <svg class="speed-gauge" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Arco de fundo -->
+                <path id="gauge-bg"   d="M20,130 A90,90 0 0,1 200,130" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round" fill="none"/>
+                <!-- Arco de progresso -->
+                <path id="gauge-arc"  d="M20,130 A90,90 0 0,1 200,130" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" fill="none"
+                      stroke-dasharray="283" stroke-dashoffset="283"/>
+                <!-- Marca de ticks -->
+                <path d="M20,130 L28,130" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M200,130 L192,130" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M110,40 L110,50" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   stop-color="#6366f1"/>
+                    <stop offset="50%"  stop-color="#b6c33f"/>
+                    <stop offset="100%" stop-color="#22c55e"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <!-- Valor central -->
+              <div class="speed-center">
+                <div class="speed-value" id="speed-display">--</div>
+                <div class="speed-unit" id="speed-unit">Mbps</div>
+                <div class="speed-phase" id="speed-phase">Pronto para testar</div>
+              </div>
+            </div>
+
+            <!-- Labels do gauge -->
+            <div class="gauge-labels">
+              <span>0</span><span>250</span><span>500</span><span>750</span><span>1000+</span>
+            </div>
+
+            <!-- Botão iniciar -->
+            <button id="btn-speedtest" class="btn-speedtest" onclick="iniciarSpeedTest()">
+              <i class="fa-solid fa-play"></i>
+              <span>Testar minha internet</span>
+            </button>
+
+            <!-- Barra de progresso -->
+            <div class="speed-progress-wrap hidden" id="speed-progress-wrap">
+              <div class="speed-progress-bar">
+                <div class="speed-progress-fill" id="speed-progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resultados -->
+          <div class="speed-results hidden" id="speed-results">
+            <div class="speed-result-card">
+              <div class="speed-result-icon" style="background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.2)">
+                <i class="fa-solid fa-arrow-down" style="color:#818cf8"></i>
+              </div>
+              <div class="speed-result-label">Download</div>
+              <div class="speed-result-value" id="res-download">--</div>
+              <div class="speed-result-unit">Mbps</div>
+            </div>
+            <div class="speed-result-card">
+              <div class="speed-result-icon" style="background:rgba(182,195,63,0.1);border-color:rgba(182,195,63,0.2)">
+                <i class="fa-solid fa-arrow-up" style="color:var(--lemon)"></i>
+              </div>
+              <div class="speed-result-label">Upload</div>
+              <div class="speed-result-value" id="res-upload">--</div>
+              <div class="speed-result-unit">Mbps</div>
+            </div>
+            <div class="speed-result-card">
+              <div class="speed-result-icon" style="background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.2)">
+                <i class="fa-solid fa-clock" style="color:#22d3ee"></i>
+              </div>
+              <div class="speed-result-label">Ping</div>
+              <div class="speed-result-value" id="res-ping">--</div>
+              <div class="speed-result-unit">ms</div>
+            </div>
+            <div class="speed-result-card">
+              <div class="speed-result-icon" style="background:rgba(251,146,60,0.1);border-color:rgba(251,146,60,0.2)">
+                <i class="fa-solid fa-wave-square" style="color:#fb923c"></i>
+              </div>
+              <div class="speed-result-label">Jitter</div>
+              <div class="speed-result-value" id="res-jitter">--</div>
+              <div class="speed-result-unit">ms</div>
+            </div>
+          </div>
+
+          <!-- Comparação com plano -->
+          <div class="speed-compare card hidden" id="speed-compare">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-chart-line"></i> Comparação com seu plano</h3>
+            </div>
+            <div class="speed-compare-body">
+              <div class="speed-compare-row">
+                <span class="speed-compare-label">Velocidade medida</span>
+                <span class="speed-compare-val" id="cmp-medida">--</span>
+              </div>
+              <div class="speed-bar-wrap">
+                <div class="speed-bar-track">
+                  <div class="speed-bar-fill" id="cmp-bar"></div>
+                  <div class="speed-bar-plan" id="cmp-plan-marker"></div>
+                </div>
+              </div>
+              <div class="speed-compare-row" style="margin-top:6px">
+                <span class="speed-compare-label">Velocidade contratada</span>
+                <span class="speed-compare-val" id="cmp-plano">-- Mbps</span>
+              </div>
+              <div class="speed-status-badge" id="cmp-badge"></div>
+            </div>
+          </div>
+
+          <!-- Histórico rápido -->
+          <div class="card" style="margin-top:20px" id="speed-history-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-clock-rotate-left"></i> Últimos testes</h3>
+              <button class="btn btn-sm btn-ghost" onclick="limparHistoricoSpeed()">Limpar</button>
+            </div>
+            <div id="speed-history-list">
+              <div class="empty-state"><i class="fa-solid fa-gauge"></i><p>Nenhum teste ainda</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== LEMON CLUB ===== -->
+        <div id="view-indicacoes" class="view hidden">
+          <div class="page-header">
+            <h2><i class="fa-solid fa-star"></i> Lemon Club</h2>
+            <p>Ganhe pontos, suba de nível e troque por benefícios</p>
+          </div>
+
+          <!-- Nível + Pontos Hero -->
+          <div class="club-hero">
+            <div class="club-hero-glow"></div>
+
+            <div class="club-level-badge" id="club-level-badge">
+              <span id="club-level-icon">🥉</span>
+              <div>
+                <div class="club-level-name" id="club-level-name">Bronze</div>
+                <div class="club-level-sub">Nível atual</div>
+              </div>
+            </div>
+
+            <div class="club-pts-center">
+              <div class="club-pts-value" id="ref-pontos">0</div>
+              <div class="club-pts-label">pontos disponíveis</div>
+            </div>
+
+            <div class="club-stats-row">
+              <div class="club-stat"><span id="ref-total">0</span><small>Indicados</small></div>
+              <div class="club-stat"><span id="ref-resgates">0</span><small>Resgates</small></div>
+              <div class="club-stat"><span id="club-total-earned">0</span><small>Pts ganhos</small></div>
+              <div class="club-stat club-stat-streak">
+                <span id="club-streak">0</span>
+                <small><i class="fa-solid fa-fire" style="color:#fb923c"></i> faturas em dia</small>
+              </div>
+            </div>
+
+            <!-- Barra de progresso de nível -->
+            <div class="club-level-progress" id="club-level-progress-wrap">
+              <div class="club-level-bar-header">
+                <span class="club-level-bar-ratio" id="club-level-bar-ratio">0 / 0 pts</span>
+                <span class="club-level-progress-label" id="club-level-progress-label"></span>
+              </div>
+              <div class="club-level-progress-bar">
+                <div class="club-level-progress-fill" id="club-level-bar"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Como ganhar pontos -->
+          <div class="club-earn-grid">
+            <div class="club-earn-card">
+              <div class="club-earn-icon" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.2)">
+                <i class="fa-solid fa-file-invoice-dollar" style="color:#4ade80"></i>
+              </div>
+              <div class="club-earn-info">
+                <div class="club-earn-title">Pagar em dia</div>
+                <div class="club-earn-desc">+25 pts por fatura paga no vencimento</div>
+              </div>
+              <div class="club-earn-pts">+25</div>
+            </div>
+            <div class="club-earn-card">
+              <div class="club-earn-icon" style="background:rgba(182,195,63,0.1);border-color:rgba(182,195,63,0.2)">
+                <i class="fa-solid fa-user-plus" style="color:var(--lemon)"></i>
+              </div>
+              <div class="club-earn-info">
+                <div class="club-earn-title">Indicar amigo</div>
+                <div class="club-earn-desc">+100 pts quando o indicado assinar</div>
+              </div>
+              <div class="club-earn-pts">+100</div>
+            </div>
+            <div class="club-earn-card">
+              <div class="club-earn-icon" style="background:rgba(251,146,60,0.1);border-color:rgba(251,146,60,0.2)">
+                <i class="fa-solid fa-fire" style="color:#fb923c"></i>
+              </div>
+              <div class="club-earn-info">
+                <div class="club-earn-title">Streak de pagamento</div>
+                <div class="club-earn-desc">+100/200/500 pts em 3, 6 e 12 meses</div>
+              </div>
+              <div class="club-earn-pts">+bônus</div>
+            </div>
+            <div class="club-earn-card">
+              <div class="club-earn-icon" style="background:rgba(129,140,248,0.1);border-color:rgba(129,140,248,0.2)">
+                <i class="fa-solid fa-trophy" style="color:#818cf8"></i>
+              </div>
+              <div class="club-earn-info">
+                <div class="club-earn-title">Missões</div>
+                <div class="club-earn-desc">Complete desafios e ganhe pts extras</div>
+              </div>
+              <div class="club-earn-pts">+pts</div>
+            </div>
+          </div>
+
+          <!-- Missões -->
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-list-check"></i> Desafios</h3>
+              <span class="club-missions-counter" id="missions-counter">0/6</span>
+            </div>
+            <div id="missions-list" class="missions-list">
+              <div class="spinner"></div>
+            </div>
+          </div>
+
+          <!-- Resgatar benefícios -->
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-ticket"></i> Trocar pontos</h3>
+              <span id="club-pontos-disp" class="club-pts-disp">0 pts</span>
+            </div>
+
+            <!-- Tier Básico -->
+            <div class="reward-tier-label">
+              <i class="fa-solid fa-seedling"></i> Básico
+            </div>
+            <div class="club-rewards-grid">
+              <div class="club-reward-card" id="reward-desconto">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💸</div>
+                  <div class="club-reward-badge">100 pts</div>
+                </div>
+                <div class="club-reward-title">10% na fatura</div>
+                <div class="club-reward-desc">Desconto de 10% sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-desconto_20">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💰</div>
+                  <div class="club-reward-badge">180 pts</div>
+                </div>
+                <div class="club-reward-title">20% na fatura</div>
+                <div class="club-reward-desc">Desconto de 20% sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto_20', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-desconto_30">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💵</div>
+                  <div class="club-reward-badge">260 pts</div>
+                </div>
+                <div class="club-reward-title">30% na fatura</div>
+                <div class="club-reward-desc">Desconto de 30% sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto_30', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-desconto_40">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💴</div>
+                  <div class="club-reward-badge">340 pts</div>
+                </div>
+                <div class="club-reward-title">40% na fatura</div>
+                <div class="club-reward-desc">Desconto de 40% sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto_40', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-desconto_50">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🤑</div>
+                  <div class="club-reward-badge">420 pts</div>
+                </div>
+                <div class="club-reward-title">50% na fatura</div>
+                <div class="club-reward-desc">Desconto de 50% sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto_50', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-desconto_80">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💎</div>
+                  <div class="club-reward-badge">650 pts</div>
+                </div>
+                <div class="club-reward-title">80% na fatura</div>
+                <div class="club-reward-desc">Desconto de 80% sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto_80', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+            </div>
+
+            <!-- Tier Médio -->
+            <div class="reward-tier-label reward-tier-medio">
+              <i class="fa-solid fa-bolt"></i> Médio
+            </div>
+            <div class="club-rewards-grid">
+              <div class="club-reward-card" id="reward-velocidade_dobro_7d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">⚡</div>
+                  <div class="club-reward-badge">220 pts</div>
+                </div>
+                <div class="club-reward-title">Dobro da velocidade 7 dias</div>
+                <div class="club-reward-desc">Velocidade duplicada por 7 dias no plano atual</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('velocidade_dobro_7d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-upgrade">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🚀</div>
+                  <div class="club-reward-badge">300 pts</div>
+                </div>
+                <div class="club-reward-title">Upgrade de velocidade 30 dias</div>
+                <div class="club-reward-desc">Velocidade turbinada por 30 dias no plano atual</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('upgrade', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-plano_up_7d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">📶</div>
+                  <div class="club-reward-badge">370 pts</div>
+                </div>
+                <div class="club-reward-title">Plano superior 7 dias</div>
+                <div class="club-reward-desc">Ativar plano imediatamente superior por 7 dias</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('plano_up_7d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-indicacao_dobro">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🤝</div>
+                  <div class="club-reward-badge">350 pts</div>
+                </div>
+                <div class="club-reward-title">Indicações em dobro</div>
+                <div class="club-reward-desc">Ganhe 200 pts nas próximas 2 indicações em vez de 100</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('indicacao_dobro', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-plano_up_15d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🌐</div>
+                  <div class="club-reward-badge">470 pts</div>
+                </div>
+                <div class="club-reward-title">Plano superior 15 dias</div>
+                <div class="club-reward-desc">Ativar plano imediatamente superior por 15 dias</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('plano_up_15d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-ponto_extra_15d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">📡</div>
+                  <div class="club-reward-badge">500 pts</div>
+                </div>
+                <div class="club-reward-title">Ponto de acesso extra 15 dias</div>
+                <div class="club-reward-desc">Ponto de acesso adicional na sua residência por 15 dias</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('ponto_extra_15d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-roteador_wifi6">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🛜</div>
+                  <div class="club-reward-badge">560 pts</div>
+                </div>
+                <div class="club-reward-title">Roteador Wi-Fi 6 (30 dias)</div>
+                <div class="club-reward-desc">Upgrade para roteador Wi-Fi 6 de alta performance por 30 dias</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('roteador_wifi6', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card" id="reward-ponto_extra_30d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">📶</div>
+                  <div class="club-reward-badge">620 pts</div>
+                </div>
+                <div class="club-reward-title">Ponto de acesso extra 30 dias</div>
+                <div class="club-reward-desc">Ponto de acesso adicional na sua residência por 30 dias</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('ponto_extra_30d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Tier Premium -->
+            <div class="reward-tier-label reward-tier-premium">
+              <i class="fa-solid fa-crown"></i> Premium
+            </div>
+            <div class="club-rewards-grid">
+              <div class="club-reward-card club-reward-top-card" id="reward-mes_gratis">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🌟</div>
+                  <div class="club-reward-badge club-reward-badge-gold">800 pts</div>
+                </div>
+                <div class="club-reward-title">1 mês grátis</div>
+                <div class="club-reward-desc">Desconto de 1 mensalidade completa no plano</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('mes_gratis', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card" id="reward-upgrade_90d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">⚡</div>
+                  <div class="club-reward-badge club-reward-badge-gold">850 pts</div>
+                </div>
+                <div class="club-reward-title">Upgrade de velocidade 90 dias</div>
+                <div class="club-reward-desc">Velocidade turbinada por 90 dias no plano atual</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('upgrade_90d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card" id="reward-plano_up_30d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🚀</div>
+                  <div class="club-reward-badge club-reward-badge-gold">950 pts</div>
+                </div>
+                <div class="club-reward-title">Plano superior 30 dias</div>
+                <div class="club-reward-desc">Ativar plano imediatamente superior por 30 dias completos</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('plano_up_30d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card" id="reward-desconto_100">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💯</div>
+                  <div class="club-reward-badge club-reward-badge-gold">1050 pts</div>
+                </div>
+                <div class="club-reward-title">100% na fatura</div>
+                <div class="club-reward-desc">Desconto integral (100%) sobre o valor da próxima fatura</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('desconto_100', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card" id="reward-plano_up_60d">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🌐</div>
+                  <div class="club-reward-badge club-reward-badge-gold">1300 pts</div>
+                </div>
+                <div class="club-reward-title">Plano superior 60 dias</div>
+                <div class="club-reward-desc">Ativar plano imediatamente superior por 60 dias completos</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('plano_up_60d', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card club-reward-elite" id="reward-dois_meses">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">🏆</div>
+                  <div class="club-reward-badge club-reward-badge-diamond">1500 pts</div>
+                </div>
+                <div class="club-reward-title">2 meses grátis</div>
+                <div class="club-reward-desc">Desconto de 2 mensalidades completas — exclusivo membros elite</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('dois_meses', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card club-reward-elite" id="reward-tres_meses">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">👑</div>
+                  <div class="club-reward-badge club-reward-badge-diamond">1800 pts</div>
+                </div>
+                <div class="club-reward-title">3 meses grátis</div>
+                <div class="club-reward-desc">Desconto de 3 mensalidades completas — exclusivo membros elite</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('tres_meses', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+
+              <div class="club-reward-card club-reward-top-card club-reward-elite" id="reward-cliente_vip">
+                <div class="club-reward-top">
+                  <div class="club-reward-icon">💎</div>
+                  <div class="club-reward-badge club-reward-badge-diamond">2000 pts</div>
+                </div>
+                <div class="club-reward-title">Status Cliente VIP 12 meses</div>
+                <div class="club-reward-desc">Prioridade máxima em tudo por 12 meses — Lemon Elite</div>
+                <button class="club-reward-btn" onclick="resgatarBeneficio('cliente_vip', this)">
+                  <i class="fa-solid fa-check"></i> Resgatar
+                </button>
+              </div>
+            </div>
+
+            <div id="club-reward-msg" style="margin-top:14px"></div>
+          </div>
+
+          <!-- Link de indicação -->
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-link"></i> Seu link de indicação</h3>
+            </div>
+            <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px">
+              Compartilhe e ganhe <strong style="color:var(--lemon)">100 pontos</strong> a cada amigo que se cadastrar.
+            </p>
+            <div class="ref-link-box">
+              <span id="ref-link-text" class="ref-link-text">—</span>
+              <button class="copy-btn" onclick="copiarLinkRef(this)">
+                <i class="fa-solid fa-copy"></i> Copiar
+              </button>
+            </div>
+            <div class="ref-share-btns" style="margin-top:12px">
+              <button class="ref-share-btn ref-whats" onclick="compartilharWhats()">
+                <i class="fa-brands fa-whatsapp"></i> WhatsApp
+              </button>
+              <button class="ref-share-btn" onclick="compartilharNativo()">
+                <i class="fa-solid fa-share-nodes"></i> Compartilhar
+              </button>
+            </div>
+          </div>
+
+          <!-- Log de pontos -->
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-clock-rotate-left"></i> Histórico de pontos</h3>
+            </div>
+            <div id="ref-historico-list" class="list-placeholder">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== WATCH BRASIL (streaming) ===== -->
+        <div id="view-watch" class="view hidden">
+          <div class="card" style="margin-bottom:16px">
+            <h2 class="page-header" style="margin-bottom:8px"><i class="fa-solid fa-tv"></i> Watch TV</h2>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px">
+              Consulte o status da sua assinatura de streaming vinculada ao seu plano Lemon.
+            </p>
+            <div id="watch-brasil-alert" class="alert alert-error hidden" style="margin-bottom:12px"></div>
+            <div id="watch-brasil-body">
+              <p style="color:var(--text-muted)">Carregando…</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PERFIL ===== -->
+        <div id="view-perfil" class="view hidden">
+
+          <!-- Hero do perfil -->
+          <div class="perfil-hero">
+            <div class="perfil-avatar" id="perfil-avatar-circle">
+              <span id="perfil-avatar-initials">?</span>
+            </div>
+            <div class="perfil-hero-info">
+              <div class="perfil-hero-name" id="perfil-hero-name">Carregando...</div>
+              <div class="perfil-hero-login" id="perfil-hero-login"></div>
+              <div class="perfil-hero-badges">
+                <span class="perfil-badge-status" id="perfil-badge-status">
+                  <i class="fa-solid fa-circle" style="font-size:0.5rem;color:#4ade80"></i> Ativo
+                </span>
+                <span class="perfil-badge-nivel" id="perfil-badge-nivel">—</span>
+                <span class="perfil-badge-pts" id="perfil-badge-pts">0 pts</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha de stats rápidos -->
+          <div class="perfil-stats-row">
+            <div class="perfil-stat">
+              <div class="perfil-stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+              <div class="perfil-stat-body">
+                <div class="perfil-stat-label">Cliente desde</div>
+                <div class="perfil-stat-val" id="perfil-stat-desde">—</div>
+              </div>
+            </div>
+            <div class="perfil-stat">
+              <div class="perfil-stat-icon"><i class="fa-solid fa-wifi"></i></div>
+              <div class="perfil-stat-body">
+                <div class="perfil-stat-label">Plano</div>
+                <div class="perfil-stat-val" id="perfil-stat-plano">—</div>
+              </div>
+            </div>
+            <div class="perfil-stat">
+              <div class="perfil-stat-icon"><i class="fa-solid fa-fire"></i></div>
+              <div class="perfil-stat-body">
+                <div class="perfil-stat-label">Faturas em dia</div>
+                <div class="perfil-stat-val" id="perfil-stat-streak">0</div>
+              </div>
+            </div>
+            <div class="perfil-stat">
+              <div class="perfil-stat-icon"><i class="fa-solid fa-star"></i></div>
+              <div class="perfil-stat-body">
+                <div class="perfil-stat-label">Missões feitas</div>
+                <div class="perfil-stat-val" id="perfil-stat-missoes">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nível / Progresso no clube -->
+          <div class="card perfil-clube-card">
+            <div class="perfil-clube-top">
+              <div>
+                <div class="perfil-clube-label">Nível no Lemon Club</div>
+                <div class="perfil-clube-nivel" id="perfil-clube-nivel-label">Bronze</div>
+              </div>
+              <div class="perfil-clube-pts-wrap">
+                <span class="perfil-clube-pts" id="perfil-clube-pts">0</span>
+                <span class="perfil-clube-pts-label">pts disponíveis</span>
+              </div>
+            </div>
+            <div class="perfil-clube-bar-wrap">
+              <div class="perfil-clube-bar-header">
+                <span class="perfil-clube-bar-ratio" id="perfil-clube-bar-ratio">0 / 0</span>
+                <span class="perfil-clube-progress-txt" id="perfil-clube-progress-txt"></span>
+              </div>
+              <div class="perfil-clube-bar">
+                <div class="perfil-clube-bar-fill" id="perfil-clube-bar-fill" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carteira (cartões Mercado Pago) -->
+          <div class="card perfil-carteira-card">
+            <div class="perfil-carteira-head">
+              <div>
+                <h3 class="perfil-carteira-title"><i class="fa-solid fa-wallet"></i> Minha carteira</h3>
+                <p class="perfil-carteira-sub">Cartões salvos com segurança no Mercado Pago para pagamentos e assinaturas.</p>
+              </div>
+              <button type="button" class="btn btn-secondary perfil-carteira-add-btn" id="btn-carteira-toggle" onclick="toggleCarteiraAddForm()">
+                <i class="fa-solid fa-plus"></i> Adicionar cartão
+              </button>
+            </div>
+            <div id="carteira-add-panel" class="carteira-add-panel hidden">
+              <p class="carteira-add-hint">Os dados do cartão são enviados direto ao Mercado Pago; o portal só recebe um token seguro.</p>
+              <div id="carteira-mp-ambiente" class="carteira-mp-ambiente"></div>
+              <input type="text" id="carteira-nome" placeholder="Nome impresso no cartão" autocomplete="cc-name" class="carteira-input" />
+              <input type="text" id="carteira-num" placeholder="Número do cartão" inputmode="numeric" autocomplete="cc-number" class="carteira-input" />
+              <div class="carteira-input-row">
+                <input type="text" id="carteira-mes" placeholder="MM" maxlength="2" inputmode="numeric" autocomplete="cc-exp-month" class="carteira-input" />
+                <input type="text" id="carteira-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" autocomplete="cc-exp-year" class="carteira-input" />
+                <input type="text" id="carteira-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" class="carteira-input" />
+              </div>
+              <input type="text" id="carteira-cpf" placeholder="CPF do titular" inputmode="numeric" class="carteira-input" />
+              <div class="carteira-add-actions">
+                <button type="button" class="btn btn-primary" id="btn-carteira-salvar" onclick="confirmarCarteiraAdd()">
+                  <i class="fa-solid fa-lock"></i> Salvar na carteira
+                </button>
+                <button type="button" class="btn btn-ghost" onclick="toggleCarteiraAddForm(true)">Cancelar</button>
+              </div>
+            </div>
+            <div id="carteira-lista" class="carteira-lista-wrap"></div>
+          </div>
+
+          <!-- Grid principal: dados + formulário -->
+          <div class="grid-2col">
+
+            <!-- Dados pessoais -->
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-id-card"></i> Dados Pessoais</h3>
+              </div>
+              <div id="perfil-dados" class="list-placeholder"><div class="spinner"></div></div>
+            </div>
+
+            <!-- Atualizar contato -->
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Atualizar Contato</h3>
+              </div>
+              <form id="form-perfil">
+                <div class="field-row">
+                  <div class="field-group">
+                    <label><i class="fa-solid fa-envelope"></i> E-mail</label>
+                    <input type="email" id="perfil-email" placeholder="Seu e-mail" />
+                  </div>
+                  <div class="field-group">
+                    <label><i class="fa-solid fa-phone"></i> Telefone</label>
+                    <input type="text" id="perfil-telefone" placeholder="(XX) XXXX-XXXX" />
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field-group">
+                    <label><i class="fa-solid fa-mobile-screen"></i> Celular</label>
+                    <input type="text" id="perfil-celular" placeholder="(XX) XXXXX-XXXX" />
+                  </div>
+                  <div class="field-group">
+                    <label><i class="fa-solid fa-location-dot"></i> CEP</label>
+                    <input type="text" id="perfil-cep" placeholder="00000-000" />
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field-group" style="flex:2">
+                    <label><i class="fa-solid fa-road"></i> Endereço</label>
+                    <input type="text" id="perfil-endereco" placeholder="Rua, Avenida..." />
+                  </div>
+                  <div class="field-group" style="flex:1">
+                    <label>Número</label>
+                    <input type="text" id="perfil-numero" placeholder="Nº" />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Complemento</label>
+                  <input type="text" id="perfil-complemento" placeholder="Apto, Bloco, Casa..." />
+                </div>
+                <div class="field-row">
+                  <div class="field-group">
+                    <label>Bairro</label>
+                    <input type="text" id="perfil-bairro" placeholder="Bairro" />
+                  </div>
+                  <div class="field-group">
+                    <label>Cidade</label>
+                    <input type="text" id="perfil-cidade" placeholder="Cidade" />
+                  </div>
+                </div>
+                <div id="perfil-feedback" class="alert hidden"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px">
+                  <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+                </button>
+              </form>
+            </div>
+
+          </div>
+
+          <!-- Ações rápidas -->
+
+        </div>
+
+        <div id="view-notificacoes" class="view hidden">
+          <div class="page-header">
+            <h2><i class="fa-solid fa-bell"></i> Notificações</h2>
+            <p>Escolha quais avisos deseja receber por Web Push e ative ou remova a inscrição neste aparelho.</p>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-mobile-screen-button"></i> Este dispositivo</h3>
+            </div>
+            <p class="text-muted" style="margin:0 0 12px;font-size:0.95rem" id="notif-push-status">—</p>
+            <p class="text-muted" style="margin:0 0 14px;font-size:0.9rem" id="notif-has-subscription">—</p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+              <button type="button" class="btn btn-primary" onclick="ativarPushNesteDispositivo()">
+                <i class="fa-solid fa-bell"></i> Ativar push neste dispositivo
+              </button>
+              <button type="button" class="btn btn-ghost" onclick="desativarPushNesteDispositivo()">
+                <i class="fa-solid fa-bell-slash"></i> Remover inscrição
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-sliders"></i> Tipos de aviso</h3>
+            </div>
+            <p class="text-muted" style="margin:0 0 16px;font-size:0.92rem">
+              Avisos da Lemon (admin) respeitam a opção “Novidades e avisos”. Lembretes de fatura são enviados pelo servidor quando há título em aberto (até 7 dias antes ou em atraso recente), no máximo uma vez por dia.
+            </p>
+            <label class="field-row" style="align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer">
+              <span><strong>Lembretes de fatura</strong><br><span class="text-muted" style="font-size:0.88rem">Vencimento e faturas em aberto</span></span>
+              <input type="checkbox" id="notif-pref-fatura" onchange="setPushNotifPref('faturaVencimento', this.checked)" />
+            </label>
+            <label class="field-row" style="align-items:center;justify-content:space-between;cursor:pointer">
+              <span><strong>Novidades e avisos Lemon</strong><br><span class="text-muted" style="font-size:0.88rem">Mensagens gerais enviadas pela equipa</span></span>
+              <input type="checkbox" id="notif-pref-avisos" onchange="setPushNotifPref('avisosLemon', this.checked)" />
+            </label>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- Bottom Navigation -->
+      <nav class="bottom-nav" id="bottom-nav">
+        <button class="bnav-item active" data-view="dashboard" onclick="navTo('dashboard')">
+          <i class="fa-solid fa-house"></i>
+          <span>Início</span>
+        </button>
+        <button class="bnav-item" data-view="faturas" onclick="navTo('faturas')">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+          <span>Faturas</span>
+          <span class="bnav-badge hidden" id="bnav-badge-faturas">0</span>
+        </button>
+        <button class="bnav-item bnav-clube" data-view="indicacoes" onclick="navTo('indicacoes')">
+          <i class="fa-solid fa-star"></i>
+          <span>Clube</span>
+          <span class="bnav-pts-badge hidden" id="nav-pontos"></span>
+        </button>
+        <button class="bnav-item" data-view="conexao" onclick="navTo('conexao')">
+          <i class="fa-solid fa-wifi"></i>
+          <span>Conexão</span>
+          <span class="conn-dot bnav-conn-dot" id="bnav-conn-dot"></span>
+        </button>
+        <button class="bnav-item" data-view="perfil" onclick="navTo('perfil')">
+          <i class="fa-solid fa-circle-user"></i>
+          <span>Perfil</span>
+        </button>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- ===== MODAL FATURA ===== -->
+  <div id="modal-fatura" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModalDirect()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="modal-header">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+        <h3>Detalhes da Fatura</h3>
+      </div>
+      <div id="modal-fatura-content"></div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL CHAMADO ===== -->
+  <div id="modal-chamado" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModalDirect()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="modal-header">
+        <i class="fa-solid fa-headset"></i>
+        <h3>Detalhes do Chamado</h3>
+      </div>
+      <div id="modal-chamado-content"></div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL INSTALAR APP (PWA — adicionar à tela inicial) ===== -->
+  <div id="modal-instalar-app" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal" style="max-width:460px">
+      <button type="button" class="modal-close" onclick="fecharModalInstalarApp()" aria-label="Fechar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="modal-header">
+        <i class="fa-solid fa-mobile-screen-button"></i>
+        <h3>Instalar na tela inicial</h3>
+      </div>
+      <p style="font-size:0.88rem;color:var(--text-muted);margin:-8px 0 18px;line-height:1.45">
+        O Lemon Portal é um <strong>site</strong> que pode funcionar como aplicativo: fica com ícone na tela inicial e abre em tela cheia, sem barra do navegador. Não está na App Store nem na Play Store — instala-se a partir do menu do navegador.
+      </p>
+
+      <div id="modal-instalar-ios" class="hidden">
+        <p style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--text)"><i class="fa-brands fa-apple" style="margin-right:6px"></i> iPhone ou iPad (Safari)</p>
+        <ol style="margin:0 0 16px 18px;padding:0;font-size:0.88rem;line-height:1.65;color:var(--text)">
+          <li>Abra este portal no <strong>Safari</strong> (recomendado). No Chrome do iOS o atalho pode não abrir como “app”.</li>
+          <li>Toque em <strong>Compartilhar</strong> <span style="opacity:.85">(quadrado com seta para cima)</span> na barra inferior — em alguns idiomas pode aparecer como “Partilhar”.</li>
+          <li>Deslize o menu e escolha <strong>Adicionar à Tela de Início</strong>.</li>
+          <li>Toque em <strong>Adicionar</strong> no canto superior direito.</li>
+        </ol>
+        <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5">Depois, use o ícone <strong>Lemon</strong> na tela inicial para entrar no portal.</p>
+      </div>
+
+      <div id="modal-instalar-android" class="hidden">
+        <p style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--text)"><i class="fa-brands fa-android" style="margin-right:6px"></i> Android (Chrome)</p>
+        <ol style="margin:0 0 16px 18px;padding:0;font-size:0.88rem;line-height:1.65;color:var(--text)">
+          <li>Abra o portal no <strong>Google Chrome</strong>.</li>
+          <li>Toque no menu <strong>⋮</strong> (três pontos), no canto superior direito.</li>
+          <li>Escolha <strong>Instalar app</strong> ou <strong>Adicionar à página inicial</strong> / <strong>Adicionar à tela inicial</strong> — o nome varia conforme a versão do Chrome.</li>
+          <li>Confirme em <strong>Instalar</strong> ou <strong>Adicionar</strong>.</li>
+        </ol>
+        <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5">Se aparecer só “Adicionar à página inicial”, o atalho abre o site; em muitos aparelhos o Chrome também oferece “Instalar app” para abrir em tela cheia, sem barra de endereços.</p>
+      </div>
+
+      <div id="modal-instalar-outros" class="hidden">
+        <p style="font-weight:700;font-size:0.9rem;margin-bottom:10px;color:var(--text)"><i class="fa-solid fa-desktop" style="margin-right:6px"></i> Computador ou outro browser</p>
+        <ul style="margin:0 0 12px 18px;padding:0;font-size:0.88rem;line-height:1.65;color:var(--text)">
+          <li><strong>Chrome ou Edge:</strong> procure o ícone de instalação (⊕ ou computador) na barra de endereços, ou menu <strong>⋮</strong> → <strong>Instalar Lemon…</strong> / <strong>Aplicações</strong> → instalar.</li>
+          <li><strong>Celular:</strong> use Safari (iOS) ou Chrome (Android) e siga as instruções acima — abra este aviso a partir do aparelho.</li>
+        </ul>
+      </div>
+
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" onclick="fecharModalInstalarApp()">Entendi</button>
+    </div>
+  </div>
+
+  <!-- ===== MODAL LEMON CLUB — desconto já pendente na fatura ===== -->
+  <div id="modal-clube-desconto-pendente" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal modal-clube-desconto-pendente" style="max-width:440px" onclick="event.stopPropagation()">
+      <button type="button" class="modal-close" onclick="fecharModalClubeDescontoPendente()" aria-label="Fechar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="modal-header">
+        <i class="fa-solid fa-ticket" style="color:#38bdf8"></i>
+        <h3>Desconto já ativo</h3>
+      </div>
+      <div class="modal-clube-desconto-pendente__body">
+        <p id="modal-clube-desconto-pendente-msg" class="modal-clube-desconto-pendente__msg"></p>
+        <p class="modal-clube-desconto-pendente__hint">Abra <strong>Faturas</strong>, localize a mensalidade com cupom Lemon Club e conclua o pagamento (PIX ou cartão Mercado Pago). Depois da baixa, poderá resgatar outro desconto.</p>
+        <div class="modal-clube-desconto-pendente__actions">
+          <button type="button" class="btn btn-secondary" onclick="fecharModalClubeDescontoPendente()">Entendi</button>
+          <button type="button" class="btn btn-primary" onclick="modalIrFaturasCupomPendente()">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Ir para faturas
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL BOAS-VINDAS (primeiro acesso) ===== -->
+  <div id="modal-boas-vindas" class="modal-overlay hidden" style="z-index:9999;backdrop-filter:blur(8px)">
+    <div class="modal" style="max-width:480px;padding:0;overflow:hidden;border:1px solid rgba(182,195,63,.25);box-shadow:0 0 60px rgba(182,195,63,.12)">
+
+      <!-- Header (azul marca + detalhe lemon) -->
+      <div style="background:linear-gradient(135deg,#1a5d77 0%,#103747 100%);padding:36px 32px 28px;text-align:center;position:relative;border-bottom:1px solid rgba(182,195,63,.2)">
+        <div style="font-size:3.2rem;margin-bottom:10px;filter:drop-shadow(0 0 18px rgba(182,195,63,.45))">🍋</div>
+        <h2 style="color:#e8f5a8;font-size:1.5rem;font-weight:800;margin-bottom:6px" id="bv-nome-title">Bem-vindo!</h2>
+        <p style="color:rgba(255,255,255,.75);font-size:.9rem">Você acaba de entrar no portal exclusivo da</p>
+        <p style="color:#b6c33f;font-weight:700;font-size:1rem;margin-top:2px">Lemon Technology 🌐</p>
+      </div>
+
+      <!-- Corpo -->
+      <div style="padding:28px 32px">
+
+        <!-- Destaque Lemon Club -->
+        <div style="background:linear-gradient(135deg,rgba(182,195,63,.1),rgba(182,195,63,.04));border:1px solid rgba(182,195,63,.2);border-radius:14px;padding:20px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <span style="font-size:1.6rem">⭐</span>
+            <div>
+              <div style="font-weight:800;color:var(--lemon);font-size:1rem">Lemon Club</div>
+              <div style="font-size:.75rem;color:var(--text-muted)">Programa de fidelidade exclusivo</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:.82rem;color:var(--text)">
+              <span style="color:var(--lemon);margin-top:1px">✓</span>
+              <span>Ganhe <strong>pontos</strong> a cada pagamento em dia</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:.82rem;color:var(--text)">
+              <span style="color:var(--lemon);margin-top:1px">✓</span>
+              <span>Indique amigos e ganhe <strong>bônus</strong></span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:.82rem;color:var(--text)">
+              <span style="color:var(--lemon);margin-top:1px">✓</span>
+              <span>Complete <strong>missões</strong> e suba de nível</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:.82rem;color:var(--text)">
+              <span style="color:var(--lemon);margin-top:1px">✓</span>
+              <span>Resgate <strong>recompensas</strong> exclusivas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- O que você pode fazer -->
+        <p style="font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">No portal você também acessa</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
+          <span style="background:rgba(26,93,119,.1);color:#1a5d77;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:500">📊 Conexão ao vivo</span>
+          <span style="background:rgba(74,222,128,.1);color:#4ade80;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:500">💳 Faturas</span>
+          <span style="background:rgba(251,191,36,.1);color:#f59e0b;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:500">⚡ Teste de velocidade</span>
+          <span style="background:rgba(139,92,246,.1);color:#a78bfa;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:500">🎫 Suporte</span>
+        </div>
+
+        <!-- Botões -->
+        <button onclick="fecharBoasVindas(false)" style="width:100%;padding:14px;background:var(--lemon);color:#0f1f05;border:none;border-radius:12px;font-size:.95rem;font-weight:800;cursor:pointer;margin-bottom:10px;transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+          <i class="fa-solid fa-star" style="margin-right:6px"></i>Explorar o Lemon Club
+        </button>
+        <button onclick="fecharBoasVindas(true)" style="width:100%;padding:10px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:10px;font-size:.82rem;cursor:pointer">
+          Ir para o dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay-loading" class="overlay-loading hidden">
+    <div class="loading-box">
+      <div class="spinner lg"></div>
+      <p>Aguarde...</p>
+    </div>
+  </div>
+
+  <script type="module" src="/js/portal-app.js"></script>
+</body>
+</html>

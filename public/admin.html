@@ -1,0 +1,2726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Lemon Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/css/admin.css"/>
+  <link rel="icon" href="/icons/lemon-logo.png" type="image/png"/>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-wrap" class="login-wrap">
+  <div class="login-card">
+    <h2>🍋 Lemon Admin</h2>
+    <p>Painel de administração do portal</p>
+    <div class="form-group">
+      <label>Usuário</label>
+      <input id="login-user" class="form-input" type="text" placeholder="admin" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" onclick="fazerLogin()">
+      <i class="fa-solid fa-right-to-bracket"></i> Entrar
+    </button>
+    <div id="login-erro" class="login-error" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ===== PAINEL ===== -->
+<div id="admin-wrap" style="display:none; width:100%">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/icons/lemon-logo.png" alt="" class="sidebar-logo-mark" width="44" height="44" decoding="async" />
+      <div class="sidebar-logo-text">
+        <h1>Admin</h1>
+        <span>Lemon Technology</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" onclick="navAdmin('dashboard')" id="nb-dashboard">
+        <i class="fa-solid fa-gauge-high"></i><span>Dashboard</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('clientes')" id="nb-clientes">
+        <i class="fa-solid fa-users"></i><span>Clientes</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('mk-clientes')" id="nb-mk-clientes">
+        <i class="fa-solid fa-address-card"></i><span>MK Clientes</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('chamados')" id="nb-chamados">
+        <i class="fa-solid fa-headset"></i><span>Chamados</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('mensagens')" id="nb-mensagens">
+        <i class="fa-solid fa-paper-plane"></i><span>Mensagens</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('titulos')" id="nb-titulos">
+        <i class="fa-solid fa-file-invoice-dollar"></i><span>Títulos</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('caixa')" id="nb-caixa">
+        <i class="fa-solid fa-cash-register"></i><span>Caixa</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('planos')" id="nb-planos">
+        <i class="fa-solid fa-layer-group"></i><span>Planos</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('missoes')" id="nb-missoes">
+        <i class="fa-solid fa-list-check"></i><span>Missões</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('notificacoes')" id="nb-notificacoes">
+        <i class="fa-solid fa-bell"></i><span>Notificações</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('watch')" id="nb-watch">
+        <i class="fa-solid fa-tv"></i><span>Watch Brasil</span>
+      </button>
+      <button class="nav-btn" onclick="navAdmin('limpeza')" id="nb-limpeza" style="margin-top:auto;color:var(--red)">
+        <i class="fa-solid fa-trash-can"></i><span>Limpeza</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="fazerLogout()">
+        <i class="fa-solid fa-right-from-bracket"></i><span>Sair</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Visão geral do Lemon Portal</p>
+      </div>
+
+      <!-- Row 1: Cards principais -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="spinner"></div></div>
+      </div>
+
+      <div class="table-card" style="margin-top:16px">
+        <div class="table-toolbar">
+          <h3><i class="fa-solid fa-bullhorn" style="color:var(--lemon);margin-right:8px"></i>Avisos no portal do cliente</h3>
+          <button type="button" class="btn btn-primary btn-sm lemon" onclick="salvarAvisosPortal()">Guardar</button>
+        </div>
+        <p style="margin:0 0 12px;font-size:0.8rem;color:var(--muted);max-width:780px;line-height:1.5">
+          O conteúdo é guardado na base SQLite (<code>data/lemon.db</code>, tabela <code>portal_avisos</code>). Edite o JSON (array com <code>mensagem</code>, <code>tipo</code>: <code>info</code> | <code>success</code> | <code>warning</code>, e opcionalmente <code>linkText</code> + <code>linkHref</code> em <code>http(s)://…</code>).
+          Os avisos aparecem no dashboard do cliente antes de Notícias e Clima.
+        </p>
+        <textarea id="portal-avisos-json" class="search-input" style="width:100%;min-height:180px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.45" spellcheck="false"></textarea>
+      </div>
+
+      <div class="table-card" style="margin-top:16px">
+        <div class="table-toolbar">
+          <h3><i class="fa-solid fa-bell" style="color:var(--lemon);margin-right:8px"></i>Push (Web Push)</h3>
+        </div>
+        <p style="margin:0 0 12px;font-size:0.8rem;color:var(--muted);line-height:1.5">
+          Subscrições guardadas na base (<code>push_subscriptions</code>). Chaves VAPID: variáveis
+          <code>VAPID_PUBLIC_KEY</code> / <code>VAPID_PRIVATE_KEY</code> no <code>.env</code>, ou ficheiro gerado
+          <code>data/vapid.json</code> na primeira subida.
+          <strong>Subscritores:</strong> <span id="push-admin-stats">—</span>
+        </p>
+        <div style="display:grid;gap:10px;max-width:560px">
+          <input type="text" id="push-test-login" class="search-input" placeholder="Login do cliente (vazio = todos)" autocomplete="off" />
+          <input type="text" id="push-test-title" class="search-input" placeholder="Título" value="Lemon Technology" />
+          <textarea id="push-test-body" class="search-input" style="min-height:72px;font-family:inherit" placeholder="Mensagem"></textarea>
+          <input type="text" id="push-test-url" class="search-input" placeholder="URL ao clicar (ex: / ou https://...)" value="/" />
+          <button type="button" class="btn btn-primary btn-sm lemon" onclick="enviarPushTesteAdmin()">Enviar push de teste</button>
+        </div>
+      </div>
+
+      <!-- Row 2: Top clientes + Níveis -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px" id="dash-row2"></div>
+
+      <!-- Row 3: Financeiro -->
+      <div style="margin-top:8px" id="dash-row3"></div>
+
+      <!-- Row 4: Movimentos recentes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px" id="dash-row4"></div>
+    </div>
+
+    <!-- Títulos -->
+    <div id="page-titulos" class="page">
+      <div class="page-header"><h2>Títulos / Faturas</h2><p>Gestão de cobranças do MK-Auth</p></div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Títulos</h3>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="search-input" id="titulo-status" style="width:130px" onchange="carregarTitulos()">
+              <option value="">Todos</option>
+              <option value="aberto">Abertos</option>
+              <option value="pago">Pagos</option>
+              <option value="vencido">Vencidos</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Login</th><th>Nome</th><th>Tipo</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr></thead>
+            <tbody id="titulos-tbody"><tr><td colspan="7"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="titulos-paginacao" style="padding:14px 20px;display:flex;gap:8px;border-top:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+    <!-- Caixa -->
+    <div id="page-caixa" class="page">
+      <div class="page-header">
+        <h2><i class="fa-solid fa-cash-register" style="color:var(--lemon);margin-right:8px"></i>Caixa</h2>
+        <p id="caixa-mes-label">Movimentações financeiras do MK-Auth</p>
+      </div>
+
+      <!-- ── Bloco mês atual (igual ao Títulos) ── -->
+      <div class="table-card" style="padding:20px 24px;margin-bottom:16px" id="caixa-mes-bloco">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px" id="caixa-mes-cards">
+          <div style="text-align:center;padding:16px 10px;border:1px solid var(--border);border-radius:10px">
+            <div class="spinner"></div>
+          </div>
+        </div>
+
+        <!-- Barra de progresso entradas vs saídas -->
+        <div style="margin-bottom:14px" id="caixa-barra-wrap">
+          <div style="height:8px;border-radius:6px;background:var(--bg2);overflow:hidden;display:flex" id="caixa-barra"></div>
+          <div style="display:flex;gap:16px;margin-top:6px;font-size:.75rem;color:var(--muted)" id="caixa-barra-legenda"></div>
+        </div>
+
+        <!-- Comparação mês anterior + totalizadores -->
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px" id="caixa-rodape"></div>
+      </div>
+
+      <!-- ── Gráficos ── -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="table-card" style="padding:20px 24px">
+          <h3 style="margin-bottom:4px;font-size:.9rem"><i class="fa-solid fa-chart-column" style="color:var(--lemon);margin-right:8px"></i>Entradas vs Saídas — últimos 30 dias</h3>
+          <p style="font-size:.75rem;color:var(--muted);margin-bottom:14px">Dados do mês atual e período recente</p>
+          <canvas id="caixa-chart-linha" height="100"></canvas>
+        </div>
+        <div class="table-card" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+          <h3 style="font-size:.9rem"><i class="fa-solid fa-chart-pie" style="color:var(--blue);margin-right:8px"></i>Distribuição do mês</h3>
+          <canvas id="caixa-chart-pizza" height="160"></canvas>
+          <div id="caixa-pizza-legenda" style="font-size:.78rem;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <!-- ── Stats cards de totais ── -->
+      <div class="stats-grid" id="caixa-stats" style="margin-bottom:16px">
+        <div class="stat-card"><div class="spinner"></div></div>
+      </div>
+
+      <!-- ── Filtros + Tabela ── -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Movimentos</h3>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="search-input" id="caixa-busca" type="text" placeholder="🔍 Filtrar histórico..." oninput="filtrarCaixaTabela()"/>
+            <select class="search-input" id="caixa-tipo-filtro" style="width:120px" onchange="filtrarCaixaTabela()">
+              <option value="">Todos</option>
+              <option value="entrada">Entradas</option>
+              <option value="saida">Saídas</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Histórico</th><th>Entrada</th><th>Saída</th><th>Tipo</th><th>Data</th></tr></thead>
+            <tbody id="caixa-tbody"><tr><td colspan="5"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="caixa-paginacao" style="padding:14px 20px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+    <!-- Clientes -->
+    <div id="page-clientes" class="page">
+      <div class="page-header">
+        <h2>Clientes</h2>
+        <p>Gerenciar pontos, missões e dados</p>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Todos os clientes</h3>
+          <input class="search-input" id="busca-cliente" type="text" placeholder="🔍  Buscar por login..." oninput="buscarClientes()"/>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Login</th>
+                <th>Nível</th>
+                <th>Pontos</th>
+                <th>Total Ganho</th>
+                <th>Missões</th>
+                <th>Indicações</th>
+                <th>Última atividade</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="clientes-tbody">
+              <tr><td colspan="8" class="empty"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MK Clientes -->
+    <div id="page-mk-clientes" class="page">
+      <div class="page-header">
+        <h2>MK-Auth — Clientes</h2>
+        <p>Clientes cadastrados no sistema MK-Auth</p>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Clientes</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="search-input" id="mk-busca" type="text" placeholder="🔍  Login ou nome..."/>
+            <button class="btn-sm lemon" onclick="carregarMkClientes()"><i class="fa-solid fa-magnifying-glass"></i></button>
+            <button class="btn-sm lemon" onclick="abrirModalNovoCliente()"><i class="fa-solid fa-plus"></i> Novo</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Login</th><th>Nome</th><th>Email</th><th>Cidade</th><th>Tipo</th><th>Plano</th><th></th></tr></thead>
+            <tbody id="mk-clientes-tbody"><tr><td colspan="7"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="mk-paginacao" style="padding:14px 20px;display:flex;gap:8px;border-top:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+    <!-- Chamados -->
+    <div id="page-chamados" class="page">
+      <div class="page-header">
+        <h2>Chamados</h2>
+        <p>Gerenciar tickets de suporte</p>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Chamados</h3>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="search-input" id="chamado-status" style="width:130px" onchange="carregarChamados()">
+              <option value="">Todos</option>
+              <option value="aberto">Abertos</option>
+              <option value="fechado">Fechados</option>
+            </select>
+            <button class="btn-sm lemon" onclick="abrirModalNovoChamado()"><i class="fa-solid fa-plus"></i> Novo chamado</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Número</th><th>Login</th><th>Assunto</th><th>Prioridade</th><th>Status</th><th>Data</th><th></th></tr></thead>
+            <tbody id="chamados-tbody"><tr><td colspan="7"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="chamados-paginacao" style="padding:14px 20px;display:flex;gap:8px;border-top:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+    <!-- Mensagens -->
+    <div id="page-mensagens" class="page">
+      <div class="page-header">
+        <h2>Mensagens</h2>
+        <p>Enviar email, SMS ou WhatsApp para clientes</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+        <!-- Email -->
+        <div class="table-card" style="padding:24px">
+          <h3 style="margin-bottom:20px;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-envelope" style="color:var(--blue)"></i> E-mail</h3>
+          <div class="form-group"><label>Login do cliente</label><input class="form-input" id="email-login" placeholder="Ex: joao123"/></div>
+          <div class="form-group"><label>Assunto</label><input class="form-input" id="email-assunto" placeholder="Assunto da mensagem"/></div>
+          <div class="form-group"><label>Mensagem</label><textarea class="form-input" id="email-msg" rows="5" placeholder="Conteúdo..."></textarea></div>
+          <button class="btn-primary" onclick="enviarEmail()"><i class="fa-solid fa-paper-plane"></i> Enviar e-mail</button>
+          <div id="email-res" class="panel-msg" style="margin-top:10px;display:none"></div>
+        </div>
+        <!-- SMS -->
+        <div class="table-card" style="padding:24px">
+          <h3 style="margin-bottom:20px;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-sms" style="color:var(--green)"></i> SMS</h3>
+          <div class="form-group"><label>Login do cliente</label><input class="form-input" id="sms-login" placeholder="Ex: joao123"/></div>
+          <div class="form-group"><label>Mensagem</label><textarea class="form-input" id="sms-msg" rows="8" placeholder="Conteúdo..."></textarea></div>
+          <button class="btn-primary" onclick="enviarSMS()"><i class="fa-solid fa-paper-plane"></i> Enviar SMS</button>
+          <div id="sms-res" class="panel-msg" style="margin-top:10px;display:none"></div>
+        </div>
+        <!-- WhatsApp -->
+        <div class="table-card" style="padding:24px">
+          <h3 style="margin-bottom:20px;display:flex;align-items:center;gap:8px"><i class="fa-brands fa-whatsapp" style="color:#4ade80"></i> WhatsApp</h3>
+          <div class="form-group"><label>Login do cliente</label><input class="form-input" id="zap-login" placeholder="Ex: joao123"/></div>
+          <div class="form-group"><label>Mensagem</label><textarea class="form-input" id="zap-msg" rows="8" placeholder="Conteúdo..."></textarea></div>
+          <button class="btn-primary" onclick="enviarZap()"><i class="fa-solid fa-paper-plane"></i> Enviar WhatsApp</button>
+          <div id="zap-res" class="panel-msg" style="margin-top:10px;display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Planos -->
+    <div id="page-planos" class="page">
+      <div class="page-header">
+        <h2>Planos</h2>
+        <p>Planos cadastrados no MK-Auth</p>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Planos</h3>
+          <button class="btn-sm lemon" onclick="abrirModalNovoPlano()"><i class="fa-solid fa-plus"></i> Novo plano</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Nome</th><th>Tipo</th><th>Download</th><th>Upload</th><th>Valor</th><th></th></tr></thead>
+            <tbody id="planos-tbody"><tr><td colspan="6"><div class="empty"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notificações WhatsApp -->
+    <div id="page-notificacoes" class="page">
+      <div class="page-header">
+        <h2><i class="fa-brands fa-whatsapp" style="color:#25d366"></i> Notificações WhatsApp</h2>
+        <p>Envie mensagens automáticas e gerencie os templates do sistema</p>
+      </div>
+
+      <!-- Stats cards -->
+      <div id="notif-stats-row" class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-paper-plane"></i></div><div class="stat-info"><span class="stat-value" id="ns-total">—</span><span class="stat-label">Total enviadas</span></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(37,211,102,.15);color:#25d366"><i class="fa-solid fa-circle-check"></i></div><div class="stat-info"><span class="stat-value" id="ns-enviados">—</span><span class="stat-label">Entregues</span></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,.12);color:var(--red)"><i class="fa-solid fa-circle-xmark"></i></div><div class="stat-info"><span class="stat-value" id="ns-erros">—</span><span class="stat-label">Com erro</span></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(251,191,36,.12);color:#f59e0b"><i class="fa-solid fa-calendar-day"></i></div><div class="stat-info"><span class="stat-value" id="ns-hoje">—</span><span class="stat-label">Hoje</span></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:rgba(139,92,246,.15);color:#8b5cf6"><i class="fa-solid fa-users"></i></div><div class="stat-info"><span class="stat-value" id="ns-clientes">—</span><span class="stat-label">Clientes notificados</span></div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+        <!-- Envio Manual -->
+        <div class="table-card" style="padding:24px">
+          <h3 style="font-size:.95rem;margin-bottom:18px"><i class="fa-solid fa-paper-plane" style="color:var(--lemon);margin-right:8px"></i>Envio manual</h3>
+          <div class="form-group">
+            <label>Login do cliente</label>
+            <input class="form-input" id="notif-login" placeholder="login do cliente" />
+          </div>
+          <div class="form-group">
+            <label>Ou usar template</label>
+            <select class="form-input" id="notif-tpl-select" onchange="preencherMsgTemplate()">
+              <option value="">— mensagem personalizada —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Mensagem <small style="color:var(--muted)">(suporta {nome}, {login}, {portal_url})</small></label>
+            <textarea class="form-input" id="notif-msg" rows="6" style="resize:vertical;font-family:monospace;font-size:.83rem" placeholder="Digite a mensagem..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="enviarNotifManual()" id="btn-enviar-notif">
+            <i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp
+          </button>
+          <div id="notif-manual-res" style="margin-top:12px;font-size:.85rem"></div>
+        </div>
+
+        <!-- Disparo em massa -->
+        <div class="table-card" style="padding:24px">
+          <h3 style="font-size:.95rem;margin-bottom:18px"><i class="fa-solid fa-rocket" style="color:var(--lemon);margin-right:8px"></i>Disparo em massa</h3>
+          <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:var(--muted);line-height:1.6">
+            <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;margin-right:6px"></i>
+            Envia para clientes que ainda <strong style="color:var(--text)">nunca receberam</strong> o template selecionado. Delay de 500ms entre envios.
+          </div>
+          <div class="form-group">
+            <label>Template a enviar</label>
+            <select class="form-input" id="massa-tpl-select">
+              <option value="boas_vindas">Boas-vindas ao portal</option>
+              <option value="lemon_club">Apresentação Lemon Club</option>
+            </select>
+          </div>
+          <div id="massa-preview" style="background:var(--bg2);border-radius:8px;padding:12px 14px;font-size:.83rem;color:var(--muted);min-height:80px;margin-bottom:16px;font-family:monospace;white-space:pre-wrap;line-height:1.5"></div>
+          <button class="btn-primary" onclick="dispararMassa()" id="btn-massa" style="width:100%">
+            <i class="fa-solid fa-rocket"></i> Iniciar disparo
+          </button>
+          <div id="massa-res" style="margin-top:12px;font-size:.85rem"></div>
+        </div>
+      </div>
+
+      <!-- Templates -->
+      <div class="table-card" style="padding:0;overflow:hidden;margin-bottom:20px">
+        <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <h3 style="font-size:.95rem"><i class="fa-solid fa-file-lines" style="color:var(--lemon);margin-right:8px"></i>Templates de mensagem</h3>
+          <small style="color:var(--muted)">Personalize os textos enviados automaticamente</small>
+        </div>
+        <div id="templates-lista" style="padding:20px">
+          <div class="empty"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Histórico -->
+      <div class="table-card" style="padding:0;overflow:hidden">
+        <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <h3 style="font-size:.95rem;flex:1"><i class="fa-solid fa-clock-rotate-left" style="color:var(--lemon);margin-right:8px"></i>Histórico de envios</h3>
+          <input class="form-input" id="hist-filtro-login" placeholder="filtrar por login" style="max-width:180px;padding:6px 10px;font-size:.83rem" oninput="carregarHistorico(1)" />
+          <select class="form-input" id="hist-filtro-status" style="max-width:140px;padding:6px 10px;font-size:.83rem" onchange="carregarHistorico(1)">
+            <option value="">Todos</option>
+            <option value="sent">Enviados</option>
+            <option value="error">Com erro</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Login</th><th>Canal</th><th>Status</th><th>Data/Hora</th><th>Mensagem</th></tr></thead>
+            <tbody id="hist-tbody"><tr><td colspan="6"><div class="empty">Carregando...</div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="hist-paginacao" style="padding:14px 24px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <!-- Limpeza -->
+    <div id="page-limpeza" class="page">
+      <div class="page-header">
+        <h2 style="color:var(--red)"><i class="fa-solid fa-trash-can"></i> Limpeza de Títulos</h2>
+        <p>Remove títulos em aberto de clientes antigos que não existem mais na rede</p>
+      </div>
+
+      <!-- Aviso -->
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:18px 22px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start">
+        <i class="fa-solid fa-triangle-exclamation" style="color:var(--red);font-size:1.2rem;margin-top:2px;flex-shrink:0"></i>
+        <div>
+          <div style="font-weight:700;color:var(--red);margin-bottom:4px">Operação irreversível</div>
+          <div style="font-size:.85rem;color:var(--muted);line-height:1.6">
+            Esta ferramenta deleta <strong style="color:var(--text)">apenas títulos em aberto</strong> (não pagos) com vencimento até o ano selecionado.
+            Títulos pagos <strong style="color:var(--text)">não são afetados</strong>. Faça um backup do banco de dados do MK-Auth antes de prosseguir.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Painel de configuração -->
+        <div class="table-card" style="padding:24px">
+          <h3 style="margin-bottom:20px;font-size:.95rem"><i class="fa-solid fa-sliders" style="color:var(--lemon);margin-right:8px"></i>Configurar limpeza</h3>
+
+          <div class="form-group">
+            <label>Status dos títulos a deletar:</label>
+            <select class="form-input" id="limpeza-status" style="max-width:200px">
+              <option value="aberto">Em aberto</option>
+              <option value="vencido">Vencidos</option>
+              <option value="ambos">Em aberto + Vencidos</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Vencimento ATÉ o ano:</label>
+            <select class="form-input" id="limpeza-ano" style="max-width:160px">
+              <option value="2020">2020 e anteriores</option>
+              <option value="2021">2021 e anteriores</option>
+              <option value="2022">2022 e anteriores</option>
+              <option value="2023">2023 e anteriores</option>
+              <option value="2024" selected>2024 e anteriores</option>
+            </select>
+          </div>
+
+          <button class="btn-primary" style="background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3)" onclick="previewLimpeza()">
+            <i class="fa-solid fa-magnifying-glass"></i> Buscar e pré-visualizar
+          </button>
+
+          <div id="limpeza-preview" style="margin-top:20px;display:none">
+            <div style="background:rgba(255,255,255,.04);border-radius:8px;padding:14px;margin-bottom:14px">
+              <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">Títulos encontrados:</div>
+              <div id="limpeza-resumo"></div>
+            </div>
+
+            <div class="form-group" style="margin-top:16px">
+              <label style="color:var(--red)">Para confirmar, digite <strong>CONFIRMAR</strong> abaixo:</label>
+              <input class="form-input" id="limpeza-confirmar" placeholder="CONFIRMAR" style="border-color:rgba(239,68,68,.3)"/>
+            </div>
+
+            <button class="btn-primary" style="background:var(--red);margin-top:4px" onclick="executarLimpeza()" id="btn-executar-limpeza">
+              <i class="fa-solid fa-trash-can"></i> Executar limpeza
+            </button>
+          </div>
+
+          <div id="limpeza-progresso" style="margin-top:20px;display:none">
+            <div class="spinner" style="margin-bottom:10px"></div>
+            <div style="font-size:.85rem;color:var(--muted)">Deletando títulos... isso pode demorar alguns minutos dependendo da quantidade.</div>
+          </div>
+
+          <div id="limpeza-resultado" style="margin-top:20px;display:none"></div>
+        </div>
+
+        <!-- Preview da tabela -->
+        <div class="table-card" style="padding:0;overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+            <h3 style="font-size:.95rem"><i class="fa-solid fa-list" style="color:var(--orange);margin-right:8px"></i>Títulos encontrados <span id="limpeza-count" style="color:var(--muted);font-weight:400;font-size:.8rem"></span></h3>
+          </div>
+          <div style="overflow:auto;max-height:500px">
+            <table>
+              <thead><tr><th>Login</th><th>Tipo</th><th>Valor</th><th>Vencimento</th></tr></thead>
+              <tbody id="limpeza-tbody">
+                <tr><td colspan="4"><div class="empty"><i class="fa-solid fa-magnifying-glass"></i>Clique em "Buscar" para visualizar</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Missões -->
+    <div id="page-missoes" class="page">
+      <div class="page-header">
+        <h2>Missões</h2>
+        <p>Todas as missões disponíveis no sistema</p>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar"><h3>Catálogo de missões</h3></div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Pontos</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody id="missoes-tbody">
+              <tr><td colspan="5" class="empty"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watch Brasil -->
+    <div id="page-watch" class="page">
+      <div class="page-header" style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,rgba(var(--lemon-rgb),.15),rgba(var(--lemon-rgb),.05));border:1px solid rgba(var(--lemon-rgb),.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fa-solid fa-tv" style="font-size:1.2rem;color:var(--lemon-d)"></i>
+        </div>
+        <div>
+          <h2 style="font-size:1.5rem;font-weight:800;margin:0">Watch Brasil</h2>
+          <p style="color:var(--muted);font-size:.85rem;margin:2px 0 0">Gerenciamento de assinantes e pacotes via API Watch</p>
+        </div>
+      </div>
+
+      <div id="watch-admin-alert" style="display:none;padding:12px 18px;border-radius:10px;margin-bottom:16px;font-size:.88rem"></div>
+
+      <!-- Tabs -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:6px;display:inline-flex;gap:4px;margin-bottom:24px">
+        <button class="watch-tab active" onclick="watchTab('buscar')" id="wt-buscar">
+          <i class="fa-solid fa-search"></i> Buscar
+        </button>
+        <button class="watch-tab" onclick="watchTab('inserir')" id="wt-inserir">
+          <i class="fa-solid fa-user-plus"></i> Inserir
+        </button>
+        <button class="watch-tab" onclick="watchTab('pacotes')" id="wt-pacotes">
+          <i class="fa-solid fa-box-open"></i> Pacotes
+        </button>
+        <button class="watch-tab" onclick="watchTab('editar')" id="wt-editar">
+          <i class="fa-solid fa-pen-to-square"></i> Editar
+        </button>
+        <button class="watch-tab" onclick="watchTab('status')" id="wt-status">
+          <i class="fa-solid fa-toggle-on"></i> Status
+        </button>
+      </div>
+
+      <!-- Tab: Buscar Ticket -->
+      <div id="watch-panel-buscar" class="watch-panel">
+        <!-- Busca individual -->
+        <div class="table-card" style="padding:28px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(var(--lemon-rgb),.1);display:flex;align-items:center;justify-content:center">
+              <i class="fa-solid fa-search" style="font-size:.8rem;color:var(--lemon-d)"></i>
+            </div>
+            <h3 style="font-size:.95rem;font-weight:700">Buscar Assinante</h3>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Pacote ID</label>
+              <input class="form-input" id="wb-buscar-pacote" placeholder="ex: 36887"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">ID Integração</label>
+              <input class="form-input" id="wb-buscar-id" placeholder="login MK"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">E-mail</label>
+              <input class="form-input" id="wb-buscar-email" placeholder="cliente@email.com"/>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="watchBuscar()" style="margin-top:18px;width:auto;padding:10px 28px;font-size:.84rem;border-radius:8px">
+            <i class="fa-solid fa-search"></i> Buscar Assinante
+          </button>
+          <div id="wb-buscar-result" style="margin-top:20px"></div>
+        </div>
+
+        <!-- Info -->
+        <div style="margin-top:14px;padding:12px 18px;border-radius:10px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px">
+          <i class="fa-solid fa-circle-info" style="color:var(--blue);flex-shrink:0"></i>
+          A API Watch permite buscar apenas por assinante individual (e-mail ou ID de integração + pacote). Não há endpoint para listar todos os clientes de um pacote.
+        </div>
+      </div>
+
+      <!-- Tab: Inserir Assinante -->
+      <div id="watch-panel-inserir" class="watch-panel" style="display:none">
+        <div class="table-card" style="padding:28px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center">
+              <i class="fa-solid fa-user-plus" style="font-size:.8rem;color:var(--green)"></i>
+            </div>
+            <h3 style="font-size:.95rem;font-weight:700">Novo Assinante</h3>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">E-mail <span style="color:var(--red)">*</span></label>
+              <input class="form-input" id="wb-ins-email" placeholder="cliente@email.com"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">ID Integração <span style="color:var(--red)">*</span></label>
+              <input class="form-input" id="wb-ins-id" placeholder="login MK"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Pacote ID <span style="color:var(--red)">*</span></label>
+              <input class="form-input" id="wb-ins-pacote" placeholder="ex: 36887"/>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Telefone</label>
+              <input class="form-input" id="wb-ins-phone" placeholder="11999998888"/>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="watchInserir()" style="margin-top:18px;width:auto;padding:10px 28px;font-size:.84rem;border-radius:8px;background:var(--green);color:#fff">
+            <i class="fa-solid fa-plus"></i> Inserir Assinante
+          </button>
+          <div id="wb-ins-result" style="margin-top:20px"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Pacotes -->
+      <div id="watch-panel-pacotes" class="watch-panel" style="display:none">
+        <!-- Resumo cards -->
+        <div id="wb-pac-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px"></div>
+
+        <!-- Tabela -->
+        <div class="table-card" style="overflow:hidden">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(96,165,250,.1);display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-box-open" style="font-size:.8rem;color:var(--blue)"></i>
+              </div>
+              <h3 style="font-size:.95rem;font-weight:700">Todos os Pacotes</h3>
+            </div>
+            <button class="btn-primary" onclick="watchCarregarPacotes()" style="width:auto;padding:8px 20px;font-size:.82rem;border-radius:8px">
+              <i class="fa-solid fa-sync"></i> Atualizar
+            </button>
+          </div>
+          <div style="overflow:auto;max-height:540px">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Pacote</th>
+                  <th>Tipo</th>
+                  <th>Status</th>
+                  <th>Telas</th>
+                  <th>Preço</th>
+                  <th>Ativos</th>
+                  <th>Inativos</th>
+                  <th>Total</th>
+                  <th>Disponível</th>
+                </tr>
+              </thead>
+              <tbody id="wb-pac-tbody">
+                <tr><td colspan="10"><div class="empty"><i class="fa-solid fa-box-open"></i>Clique em "Atualizar" para carregar os pacotes</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Editar -->
+      <div id="watch-panel-editar" class="watch-panel" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="table-card" style="padding:28px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(234,88,12,.1);display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-phone" style="font-size:.8rem;color:var(--orange)"></i>
+              </div>
+              <h3 style="font-size:.95rem;font-weight:700">Editar Telefone</h3>
+            </div>
+            <div class="form-group" style="margin:0 0 12px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Pacote ID</label>
+              <input class="form-input" id="wb-edt-ph-pacote" placeholder="ex: 36887"/>
+            </div>
+            <div class="form-group" style="margin:0 0 12px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">E-mail do Assinante</label>
+              <input class="form-input" id="wb-edt-ph-email" placeholder="cliente@email.com"/>
+            </div>
+            <div class="form-group" style="margin:0 0 12px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Novo Telefone</label>
+              <input class="form-input" id="wb-edt-ph-phone" placeholder="11999998888"/>
+            </div>
+            <button class="btn-primary" onclick="watchEditPhone()" style="width:auto;padding:10px 24px;font-size:.82rem;border-radius:8px;background:var(--orange);color:#fff">
+              <i class="fa-solid fa-save"></i> Salvar
+            </button>
+            <div id="wb-edt-ph-result" style="margin-top:14px"></div>
+          </div>
+
+          <div class="table-card" style="padding:28px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(96,165,250,.1);display:flex;align-items:center;justify-content:center">
+                <i class="fa-solid fa-envelope" style="font-size:.8rem;color:var(--blue)"></i>
+              </div>
+              <h3 style="font-size:.95rem;font-weight:700">Editar E-mail</h3>
+            </div>
+            <div class="form-group" style="margin:0 0 12px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Pacote ID</label>
+              <input class="form-input" id="wb-edt-em-pacote" placeholder="ex: 36887"/>
+            </div>
+            <div class="form-group" style="margin:0 0 12px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">E-mail Atual</label>
+              <input class="form-input" id="wb-edt-em-email" placeholder="atual@email.com"/>
+            </div>
+            <div class="form-group" style="margin:0 0 12px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Novo E-mail</label>
+              <input class="form-input" id="wb-edt-em-new" placeholder="novo@email.com"/>
+            </div>
+            <button class="btn-primary" onclick="watchEditEmail()" style="width:auto;padding:10px 24px;font-size:.82rem;border-radius:8px;background:var(--blue);color:#fff">
+              <i class="fa-solid fa-save"></i> Salvar
+            </button>
+            <div id="wb-edt-em-result" style="margin-top:14px"></div>
+          </div>
+        </div>
+
+        <div class="table-card" style="padding:28px;margin-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center">
+              <i class="fa-solid fa-paper-plane" style="font-size:.8rem;color:var(--green)"></i>
+            </div>
+            <h3 style="font-size:.95rem;font-weight:700">Reenviar E-mail de Ativação</h3>
+          </div>
+          <div style="display:flex;gap:14px;align-items:end">
+            <div class="form-group" style="margin:0;flex:1;max-width:320px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Ticket</label>
+              <input class="form-input" id="wb-resend-ticket" placeholder="ticket do assinante"/>
+            </div>
+            <button class="btn-primary" onclick="watchResendEmail()" style="height:42px;width:auto;padding:10px 28px;font-size:.82rem;border-radius:8px;background:var(--green);color:#fff">
+              <i class="fa-solid fa-paper-plane"></i> Reenviar
+            </button>
+          </div>
+          <div id="wb-resend-result" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Status -->
+      <div id="watch-panel-status" class="watch-panel" style="display:none">
+        <div class="table-card" style="padding:28px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center">
+              <i class="fa-solid fa-toggle-on" style="font-size:.8rem;color:var(--green)"></i>
+            </div>
+            <h3 style="font-size:.95rem;font-weight:700">Ativar / Inativar Ticket</h3>
+          </div>
+          <div style="display:flex;gap:14px;align-items:end;flex-wrap:wrap">
+            <div class="form-group" style="margin:0;flex:1;min-width:200px;max-width:400px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Ticket</label>
+              <input class="form-input" id="wb-st-ticket" placeholder="ticket do assinante"/>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-primary" onclick="watchUpdateStatus(true)" style="height:42px;width:auto;padding:10px 22px;font-size:.82rem;border-radius:8px;background:var(--green);color:#fff">
+                <i class="fa-solid fa-toggle-on"></i> Ativar
+              </button>
+              <button class="btn-primary" onclick="watchUpdateStatus(false)" style="height:42px;width:auto;padding:10px 22px;font-size:.82rem;border-radius:8px;background:rgba(239,68,68,.9);color:#fff">
+                <i class="fa-solid fa-toggle-off"></i> Inativar
+              </button>
+            </div>
+          </div>
+          <div id="wb-st-result" style="margin-top:20px"></div>
+        </div>
+
+        <div class="table-card" style="padding:28px;margin-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.1);display:flex;align-items:center;justify-content:center">
+              <i class="fa-solid fa-trash-can" style="font-size:.8rem;color:var(--red)"></i>
+            </div>
+            <h3 style="font-size:.95rem;font-weight:700;color:var(--red)">Deletar Ticket</h3>
+          </div>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:18px;line-height:1.5">Cancela permanentemente o plano do assinante na Watch. Esta ação é <strong style="color:var(--red)">irreversível</strong>.</p>
+          <div style="display:flex;gap:14px;align-items:end">
+            <div class="form-group" style="margin:0;flex:1;max-width:400px">
+              <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Ticket</label>
+              <input class="form-input" id="wb-del-ticket" placeholder="ticket do assinante"/>
+            </div>
+            <button class="btn-primary" onclick="watchDeletar()" style="height:42px;width:auto;padding:10px 28px;font-size:.82rem;border-radius:8px;background:var(--red);color:#fff">
+              <i class="fa-solid fa-trash-can"></i> Deletar
+            </button>
+          </div>
+          <div id="wb-del-result" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Painel lateral de cliente -->
+<div class="overlay" id="overlay" onclick="fecharPainel()"></div>
+<div class="cliente-panel" id="cliente-panel">
+  <button class="panel-close" onclick="fecharPainel()"><i class="fa-solid fa-xmark"></i></button>
+  <div id="panel-content"></div>
+</div>
+
+<div id="admin-toast"></div>
+
+<script>
+const API = '/admin';
+let _clienteAtual = null;
+let _missoesList  = [];
+
+async function req(method, url, body) {
+  const opts = {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  const ct = r.headers.get('content-type') || '';
+  let d = {};
+  if (ct.includes('application/json')) {
+    try {
+      d = await r.json();
+    } catch {
+      d = {};
+    }
+  }
+  if (!r.ok) throw new Error(d.error || `Erro HTTP ${r.status}`);
+  return d;
+}
+
+function toast(msg, tipo = 'success') {
+  const wrap = document.getElementById('admin-toast');
+  const t = document.createElement('div');
+  t.className = `toast toast-${tipo}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+function fmtData(str) {
+  if (!str) return '—';
+  return new Date(str).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function nivelBadge(n) {
+  const map = { Bronze:'badge-muted', Prata:'badge-blue', Ouro:'badge-orange', Diamante:'badge-lemon' };
+  return `<span class="badge ${map[n]||'badge-muted'}">${n||'Bronze'}</span>`;
+}
+
+// ── Auth ──────────────────────────────────────────────
+async function fazerLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const erro = document.getElementById('login-erro');
+  try {
+    await req('POST', `${API}/login`, { usuario: u, senha: p });
+    document.getElementById('login-wrap').style.display = 'none';
+    document.getElementById('admin-wrap').style.display = 'flex';
+    await iniciar();
+  } catch (e) {
+    erro.style.display = 'block';
+    erro.textContent = e.message;
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-wrap').style.display !== 'none') fazerLogin();
+});
+
+async function fazerLogout() {
+  await req('POST', `${API}/logout`);
+  location.reload();
+}
+
+async function verificarSessao() {
+  try {
+    await req('GET', `${API}/me`);
+    document.getElementById('login-wrap').style.display = 'none';
+    document.getElementById('admin-wrap').style.display = 'flex';
+    await iniciar();
+  } catch { /* não logado */ }
+}
+
+// ── Navegação ──────────────────────────────────────────
+function navAdmin(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const pg = document.getElementById(`page-${page}`);
+  const nb = document.getElementById(`nb-${page}`);
+  if (pg) pg.classList.add('active');
+  if (nb) nb.classList.add('active');
+  if (page === 'dashboard') {
+    void (async () => {
+      await carregarStats();
+      await carregarAvisosPortal();
+      await carregarPushAdminStats();
+    })();
+  }
+  if (page === 'clientes')    carregarClientes();
+  if (page === 'mk-clientes') carregarMkClientes();
+  if (page === 'chamados')    carregarChamados();
+  if (page === 'titulos')     carregarTitulos();
+  if (page === 'caixa')       carregarCaixa();
+  if (page === 'planos')      carregarPlanos();
+  if (page === 'missoes')     carregarMissoes();
+  if (page === 'notificacoes') carregarNotificacoes();
+  // watch e limpeza não precisam de carregamento automático
+}
+
+// ── Iniciar ──────────────────────────────────────────
+async function iniciar() {
+  await carregarStats();
+  await carregarAvisosPortal();
+  await carregarPushAdminStats();
+}
+
+async function carregarAvisosPortal() {
+  const ta = document.getElementById('portal-avisos-json');
+  if (!ta) return;
+  try {
+    const d = await req('GET', `${API}/portal-avisos`);
+    ta.value = JSON.stringify(d.avisos || [], null, 2);
+  } catch (e) {
+    ta.value = `/* ${(e.message || 'Erro ao carregar avisos').replace(/\*\//g, '')} */\n[]`;
+    toast(e.message || 'Erro ao carregar avisos', 'error');
+  }
+}
+
+async function carregarPushAdminStats() {
+  const el = document.getElementById('push-admin-stats');
+  if (!el) return;
+  try {
+    const d = await req('GET', `${API}/push/stats`);
+    el.textContent = d.total != null ? String(d.total) : '0';
+  } catch {
+    el.textContent = '—';
+  }
+}
+
+async function enviarPushTesteAdmin() {
+  const title = document.getElementById('push-test-title')?.value?.trim() || 'Lemon';
+  const body = document.getElementById('push-test-body')?.value?.trim();
+  const login = document.getElementById('push-test-login')?.value?.trim() || '';
+  const url = document.getElementById('push-test-url')?.value?.trim() || '/';
+  if (!body) return toast('Preenche o corpo da mensagem.', 'error');
+  const n = document.getElementById('push-admin-stats')?.textContent || '?';
+  if (!login && !confirm(`Enviar para TODOS os subscritores (${n})?`)) return;
+  try {
+    const r = await req('POST', `${API}/push/enviar`, {
+      title,
+      body,
+      url,
+      ...(login ? { login } : {}),
+    });
+    toast(`Push: entregues=${r.ok} expiradas/removidas=${r.removed} falhas=${r.err}`);
+    carregarPushAdminStats();
+  } catch (e) {
+    toast(e.message || 'Erro ao enviar', 'error');
+  }
+}
+
+async function salvarAvisosPortal() {
+  const ta = document.getElementById('portal-avisos-json');
+  if (!ta) return;
+  try {
+    const arr = JSON.parse(ta.value || '[]');
+    if (!Array.isArray(arr)) throw new Error('O conteúdo tem de ser um array JSON.');
+    const d = await req('PUT', `${API}/portal-avisos`, { avisos: arr });
+    ta.value = JSON.stringify(d.avisos || [], null, 2);
+    toast('Avisos guardados.');
+  } catch (e) {
+    toast(e.message || 'Erro ao guardar', 'error');
+  }
+}
+
+// ── Stats ──────────────────────────────────────────
+async function carregarStats() {
+  try {
+    const d = await req('GET', `${API}/stats`);
+    const grid = document.getElementById('stats-grid');
+    const row2 = document.getElementById('dash-row2');
+
+    // Cards principais
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(182,195,63,0.1);color:var(--lemon)"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-val">${d.clientes}</div>
+        <div class="stat-label">Clientes no Clube</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(96,165,250,0.1);color:var(--blue)"><i class="fa-solid fa-address-card"></i></div>
+        <div class="stat-val">${(d.mk?.total || 0).toLocaleString('pt-BR')}</div>
+        <div class="stat-label">Clientes no MK-Auth</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(74,222,128,0.1);color:var(--green)"><i class="fa-solid fa-star"></i></div>
+        <div class="stat-val">${d.totalPts.toLocaleString('pt-BR')}</div>
+        <div class="stat-label">Pontos distribuídos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(74,222,128,0.1);color:var(--green)"><i class="fa-solid fa-list-check"></i></div>
+        <div class="stat-val">${d.totalMissoes}</div>
+        <div class="stat-label">Missões concluídas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(251,146,60,0.1);color:var(--orange)"><i class="fa-solid fa-headset"></i></div>
+        <div class="stat-val">${d.mk?.chamados || 0}</div>
+        <div class="stat-label">Total de chamados</div>
+      </div>
+      <div class="stat-card" style="${(d.mk?.chamadosAbertos||0) > 0 ? 'border-color:rgba(239,68,68,.3)' : ''}">
+        <div class="stat-icon" style="background:rgba(239,68,68,0.1);color:var(--red)"><i class="fa-solid fa-circle-exclamation"></i></div>
+        <div class="stat-val" style="${(d.mk?.chamadosAbertos||0) > 0 ? 'color:var(--red)' : ''}">${d.mk?.chamadosAbertos || 0}</div>
+        <div class="stat-label">Chamados abertos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(167,139,250,0.1);color:#a78bfa"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="stat-val">${d.mk?.planos || 0}</div>
+        <div class="stat-label">Planos cadastrados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(251,146,60,0.1);color:var(--orange)"><i class="fa-solid fa-user-plus"></i></div>
+        <div class="stat-val">${d.totalReferrals}</div>
+        <div class="stat-label">Indicações</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(182,195,63,0.1);color:var(--lemon)"><i class="fa-solid fa-ticket"></i></div>
+        <div class="stat-val">${d.totalResgates}</div>
+        <div class="stat-label">Resgates de pontos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(96,165,250,0.1);color:var(--blue)"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="stat-val">${d.mediaStreak || 0}</div>
+        <div class="stat-label">Média de meses em dia</div>
+      </div>
+      ${d.topCliente ? `
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b"><i class="fa-solid fa-crown"></i></div>
+        <div class="stat-val" style="font-size:.95rem;word-break:break-all">${d.topCliente.login}</div>
+        <div class="stat-label">${d.topCliente.points} pts — Top clube</div>
+      </div>` : ''}
+    `;
+
+    // ── Row 2: Top 5 + Distribuição de níveis ──
+    const nivelCor  = { Diamante:'#60a5fa', Ouro:'#f59e0b', Prata:'#9ca3af', Bronze:'#cd7f32' };
+    const nivelIcon = { Diamante:'💎', Ouro:'🥇', Prata:'🥈', Bronze:'🥉' };
+    const nivelTotal = Object.values(d.niveis || {}).reduce((a,b)=>a+b,0) || 1;
+
+    const top5Html = (d.top5 || []).map((c, i) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:26px;height:26px;border-radius:50%;background:${i===0?'rgba(245,158,11,.2)':'rgba(255,255,255,.05)'};
+          display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;
+          color:${i===0?'#f59e0b':'var(--muted)'};">${i+1}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.88rem">${c.login}</div>
+          <div style="font-size:.72rem;color:var(--muted)">${c.streak || 0} faturas em dia</div>
+        </div>
+        <div style="font-weight:700;color:var(--lemon)">${(c.points||0).toLocaleString('pt-BR')} pts</div>
+      </div>
+    `).join('');
+
+    const niveisHtml = Object.entries(d.niveis || {}).map(([nivel, qtd]) => {
+      const pct = Math.round(qtd / nivelTotal * 100);
+      return `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+            <span style="font-size:.82rem">${nivelIcon[nivel]} ${nivel}</span>
+            <span style="font-size:.82rem;color:var(--muted)">${qtd} cliente${qtd!==1?'s':''} (${pct}%)</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${nivelCor[nivel]};border-radius:4px;transition:width .6s"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    row2.innerHTML = `
+      <div class="table-card" style="padding:20px 24px">
+        <h3 style="margin-bottom:16px;font-size:.95rem"><i class="fa-solid fa-trophy" style="color:#f59e0b;margin-right:8px"></i>Top 5 — Lemon Club</h3>
+        ${top5Html || '<div class="empty">Sem dados</div>'}
+      </div>
+      <div class="table-card" style="padding:20px 24px">
+        <h3 style="margin-bottom:20px;font-size:.95rem"><i class="fa-solid fa-chart-pie" style="color:var(--lemon);margin-right:8px"></i>Distribuição de níveis</h3>
+        ${niveisHtml}
+      </div>
+    `;
+
+    // ── Row 3: Financeiro (Títulos do mês) ──
+    const mk  = d.mk || {};
+    const tit = mk.titulos || {};
+    const cx  = mk.caixa   || {};
+    const fmtR = v => `R$ ${(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+    // percentuais calculados inline no template
+
+    const row3 = document.getElementById('dash-row3');
+    row3.innerHTML = `
+      <div class="table-card" style="padding:20px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+          <h3 style="font-size:.95rem"><i class="fa-solid fa-file-invoice-dollar" style="color:var(--green);margin-right:8px"></i>Títulos / Cobranças</h3>
+          <span style="background:rgba(182,195,63,.1);color:var(--lemon);border:1px solid rgba(182,195,63,.2);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600">${tit.mesLabel||'Mês atual'}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <!-- Pagamentos recebidos este mês (contagem do caixa) -->
+          <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:.62rem;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Pagos este mês</div>
+            <div style="font-size:1.5rem;font-weight:800;color:var(--green)">${tit.pagosMes||0}</div>
+            <div style="font-size:.78rem;font-weight:600;color:var(--green);margin-top:3px">${fmtR(tit.receitaMes)}</div>
+            <div style="font-size:.66rem;color:var(--muted);margin-top:2px">pagamentos</div>
+          </div>
+          <!-- Receita total do mês (valor do caixa) -->
+          <div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:.62rem;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Receita recebida</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--blue)">${fmtR(tit.receitaMes)}</div>
+            <div style="font-size:.66rem;color:var(--muted);margin-top:5px">do caixa deste mês</div>
+          </div>
+          <!-- A receber: abertos com vencimento no mês -->
+          <div style="background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:.62rem;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">A receber</div>
+            <div style="font-size:1.5rem;font-weight:800;color:var(--orange)">${tit.aReceberMes||0}</div>
+            <div style="font-size:.78rem;font-weight:600;color:var(--orange);margin-top:3px">${fmtR(tit.valorAReceberMes)}</div>
+            <div style="font-size:.66rem;color:var(--muted);margin-top:2px">venc. este mês</div>
+          </div>
+          <!-- Inadimplentes com vencimento neste mês -->
+          <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:.62rem;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Inadimplentes</div>
+            <div style="font-size:1.5rem;font-weight:800;color:var(--red)">${tit.vencidosMes||0}</div>
+            <div style="font-size:.78rem;font-weight:600;color:var(--red);margin-top:3px">${fmtR(tit.valorVencidoMes)}</div>
+            <div style="font-size:.66rem;color:var(--muted);margin-top:2px">vencidos este mês</div>
+          </div>
+        </div>
+        <!-- Barra receita vs a receber -->
+        <div style="margin-bottom:5px;font-size:.72rem;color:var(--muted)">Receita recebida vs. a receber</div>
+        ${(() => {
+          const total = (tit.receitaMes||0) + (tit.valorAReceberMes||0) + (tit.valorVencidoMes||0) || 1;
+          const pR = Math.round((tit.receitaMes||0)       / total * 100);
+          const pA = Math.round((tit.valorAReceberMes||0)  / total * 100);
+          const pV = Math.round((tit.valorVencidoMes||0)   / total * 100);
+          return `<div style="height:8px;border-radius:6px;overflow:hidden;display:flex;gap:2px">
+            <div style="width:${pR}%;background:var(--green);transition:width .6s"></div>
+            <div style="width:${pA}%;background:var(--orange);transition:width .6s"></div>
+            <div style="width:${pV}%;background:var(--red);transition:width .6s"></div>
+          </div>
+          <div style="display:flex;gap:14px;margin-top:5px;font-size:.7rem;color:var(--muted)">
+            <span><span style="color:var(--green)">■</span> Recebido ${pR}%</span>
+            <span><span style="color:var(--orange)">■</span> A receber ${pA}%</span>
+            <span><span style="color:var(--red)">■</span> Vencido ${pV}%</span>
+          </div>`;
+        })()}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:.72rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <span>Total geral a receber:</span>
+          <span style="color:var(--orange);font-weight:700;font-size:.85rem">
+            ${(tit.totalAbertos||0).toLocaleString('pt-BR')} em aberto
+            ${tit.valorTotalAbertos > 0 ? `— R$ ${parseFloat(tit.valorTotalAbertos).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : ''}
+          </span>
+          <span style="color:var(--muted)">·</span>
+          <span style="color:var(--red);font-weight:700;font-size:.85rem">
+            ${(tit.totalVencidos||0).toLocaleString('pt-BR')} vencidos
+            ${tit.valorTotalVencidos > 0 ? `— R$ ${parseFloat(tit.valorTotalVencidos).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : ''}
+          </span>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn-sm lemon" onclick="navAdmin('titulos')"><i class="fa-solid fa-arrow-right"></i> Ver todos os títulos</button>
+        </div>
+      </div>
+    `;
+
+    // ── Row 4: Movimentos recentes do caixa + Gráfico caixa ──
+    const movs = cx.movRecentes || [];
+    const movsHtml = movs.length ? movs.map(m => {
+      const ent = parseFloat(m.entrada) || 0;
+      const sai = parseFloat(m.saida)   || 0;
+      const isEnt = ent > 0;
+      return `<tr>
+        <td style="font-size:.78rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.historico||'—'}</td>
+        <td style="color:var(--green);font-weight:600">${ent>0 ? fmtR(ent) : '—'}</td>
+        <td style="color:var(--red);font-weight:600">${sai>0 ? fmtR(sai) : '—'}</td>
+        <td style="font-size:.72rem;color:var(--muted)">${(m.data||'').slice(0,10)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="4"><div class="empty">Sem movimentos</div></td></tr>`;
+
+    const row4 = document.getElementById('dash-row4');
+    row4.innerHTML = `
+      <div class="table-card" style="padding:20px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+          <h3 style="font-size:.95rem"><i class="fa-solid fa-cash-register" style="color:var(--blue);margin-right:8px"></i>Caixa — Mês Atual</h3>
+          <span style="background:rgba(182,195,63,.1);color:var(--lemon);border:1px solid rgba(182,195,63,.2);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600">${tit.mesLabel||'Mês atual'}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px"><i class="fa-solid fa-arrow-down"></i> Entradas</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--green)">${fmtR(cx.receitaMes)}</div>
+          </div>
+          <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px"><i class="fa-solid fa-arrow-up"></i> Saídas</div>
+            <div style="font-size:1.15rem;font-weight:800;color:var(--red)">${fmtR(cx.saidaMes)}</div>
+          </div>
+        </div>
+        <div style="background:rgba(182,195,63,.06);border:1px solid rgba(182,195,63,.15);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px">
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:2px">Saldo do mês</div>
+          <div style="font-size:1.3rem;font-weight:800;color:${((cx.receitaMes||0)-(cx.saidaMes||0))>=0?'var(--lemon)':'var(--red)'}">${fmtR((cx.receitaMes||0)-(cx.saidaMes||0))}</div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:10px">${(cx.totalMovimentos||0).toLocaleString('pt-BR')} movimentos totais no caixa</div>
+        <button class="btn-sm lemon" onclick="navAdmin('caixa')"><i class="fa-solid fa-arrow-right"></i> Ver caixa completo</button>
+      </div>
+
+      <div class="table-card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+          <h3 style="font-size:.95rem"><i class="fa-solid fa-clock-rotate-left" style="color:var(--orange);margin-right:8px"></i>Últimos movimentos</h3>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Histórico</th><th>Entrada</th><th>Saída</th><th>Data</th></tr></thead>
+            <tbody>${movsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) { toast('Erro ao carregar stats: ' + e.message, 'error'); }
+}
+
+// ── Títulos (página) ──────────────────────────────────────────
+let _titulosPagina = 1;
+async function carregarTitulos(pagina = 1) {
+  _titulosPagina = pagina;
+  const status = document.getElementById('titulo-status')?.value || '';
+  const tbody  = document.getElementById('titulos-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="spinner"></div></div></td></tr>`;
+  try {
+    const d = await req('GET', `${API}/mk/titulos?pagina=${pagina}&status=${status}&limite=100`);
+    const titulos = d.titulos || [];
+    if (!titulos.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-file-slash"></i>Nenhum título encontrado</div></td></tr>`;
+    } else {
+      const fmtR = v => `R$ ${parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+      const statusCor = { aberto:'badge-orange', pago:'badge-green', vencido:'badge-red' };
+      tbody.innerHTML = titulos.map(t => `<tr>
+        <td><strong>${t.login||'—'}</strong></td>
+        <td style="font-size:.8rem">${t.nome||'—'}</td>
+        <td><span class="badge badge-muted">${t.tipo||'—'}</span></td>
+        <td><strong style="color:var(--lemon)">${fmtR(t.valor)}</strong></td>
+        <td style="font-size:.78rem;color:var(--muted)">${(t.datavenc||'').slice(0,10)}</td>
+        <td><span class="badge ${statusCor[t.status]||'badge-muted'}">${t.status||'—'}</span></td>
+        <td>
+          ${t.status==='aberto'?`<button class="btn-sm lemon" onclick="receberTitulo('${t.uuid}','${t.login}')"><i class="fa-solid fa-check"></i> Receber</button>`:''}
+        </td>
+      </tr>`).join('');
+    }
+    const pag = document.getElementById('titulos-paginacao');
+    if (pag) {
+      const total = d.total_paginas || 1;
+      pag.innerHTML = Array.from({length:Math.min(total,10)},(_,i)=>i+1).map(p=>
+        `<button class="btn-sm ${p===pagina?'lemon':''}" onclick="carregarTitulos(${p})">${p}</button>`
+      ).join('') + (total>10?`<span style="color:var(--muted);font-size:.8rem;padding:4px 8px">... ${total} págs</span>`:'');
+    }
+  } catch(e) { toast('Erro títulos: ' + e.message, 'error'); }
+}
+
+async function receberTitulo(uuid, login) {
+  if (!confirm(`Registrar recebimento do título de ${login}?`)) return;
+  try {
+    await req('PUT', `${API}/mk/faturas/receber`, { uuid });
+    toast('Título recebido com sucesso!');
+    carregarTitulos(_titulosPagina);
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+// ── Caixa (página) ──────────────────────────────────────────
+let _caixaPagina = 1, _caixaTotalPags = 1, _caixaMovsAtual = [];
+let _caixaChartLinha = null, _caixaChartPizza = null;
+
+async function carregarCaixa(pagina = null) {
+  const tbody   = document.getElementById('caixa-tbody');
+  const statsEl = document.getElementById('caixa-stats');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="spinner"></div></div></td></tr>`;
+
+  const fmtR  = v => `R$ ${parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+  const fmtRs = v => parseFloat(v||0) > 0 ? fmtR(v) : '—';
+  const sinal  = v => v > 0 ? `+${v}%` : `${v}%`;
+
+  try {
+    // ── Carrega stats do mês e tabela em paralelo ──
+    const [stats, meta] = await Promise.all([
+      req('GET', `${API}/mk/caixa/stats`),
+      pagina === null ? req('GET', `${API}/mk/caixa?pagina=1&limite=50`) : Promise.resolve(null),
+    ]);
+
+    if (pagina === null) {
+      _caixaTotalPags = meta.total_paginas || 1;
+      pagina = _caixaTotalPags;
+    }
+
+    // ── Carrega a página solicitada ──
+    _caixaPagina = pagina;
+    const d = await req('GET', `${API}/mk/caixa?pagina=${pagina}&limite=50`);
+    _caixaTotalPags = d.total_paginas || _caixaTotalPags;
+    _caixaMovsAtual = [...(d.caixa || [])].reverse(); // mais recente no topo
+
+    // ─────────────────────────────────────────────
+    // Bloco do mês (igual ao Títulos)
+    // ─────────────────────────────────────────────
+    const { entMes, saiMes, saldoMes, countEntMes, countSaiMes,
+            entHoje, saiHoje, entMesAnt, saiMesAnt, varEntradas,
+            totalRegistros, mesLabel, grafico, ultimos } = stats;
+
+    document.getElementById('caixa-mes-label').textContent = `Caixa — ${mesLabel}`;
+
+    // Cards do mês
+    const cards = document.getElementById('caixa-mes-cards');
+    const varBadge = varEntradas !== null
+      ? `<span style="font-size:.72rem;padding:2px 8px;border-radius:20px;background:${parseFloat(varEntradas)>=0?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)'};color:${parseFloat(varEntradas)>=0?'var(--green)':'var(--red)'}">
+           ${parseFloat(varEntradas)>=0?'▲':'▼'} ${Math.abs(varEntradas)}% vs mês ant.
+         </span>` : '';
+    cards.innerHTML = `
+      <div style="text-align:center;padding:16px 10px;border:1px solid rgba(74,222,128,.25);border-radius:10px;background:rgba(74,222,128,.04)">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Entradas este mês</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--green);margin-bottom:4px">${countEntMes}</div>
+        <div style="font-size:.88rem;font-weight:600;color:var(--green);margin-bottom:6px">${fmtR(entMes)}</div>
+        <div style="font-size:.72rem;color:var(--muted)">recebimentos</div>
+        ${varBadge}
+      </div>
+      <div style="text-align:center;padding:16px 10px;border:1px solid rgba(239,68,68,.2);border-radius:10px;background:rgba(239,68,68,.04)">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Saídas este mês</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--red);margin-bottom:4px">${countSaiMes}</div>
+        <div style="font-size:.88rem;font-weight:600;color:var(--red);margin-bottom:6px">${fmtR(saiMes)}</div>
+        <div style="font-size:.72rem;color:var(--muted)">despesas</div>
+      </div>
+      <div style="text-align:center;padding:16px 10px;border:1px solid rgba(182,195,63,.2);border-radius:10px;background:rgba(182,195,63,.04)">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Saldo do mês</div>
+        <div style="font-size:1.6rem;font-weight:800;color:${saldoMes>=0?'var(--lemon)':'var(--red)'};margin-bottom:4px">${fmtR(saldoMes)}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:6px">entradas − saídas</div>
+      </div>
+      <div style="text-align:center;padding:16px 10px;border:1px solid rgba(251,191,36,.2);border-radius:10px;background:rgba(251,191,36,.04)">
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Hoje</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#f59e0b;margin-bottom:4px">${fmtRs(entHoje)}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">entrado hoje</div>
+        ${saiHoje > 0 ? `<div style="font-size:.75rem;color:var(--red);margin-top:2px">${fmtR(saiHoje)} saídas</div>` : ''}
+      </div>
+    `;
+
+    // Barra de progresso entradas vs saídas
+    const total3 = entMes + saiMes || 1;
+    const pEnt   = (entMes / total3 * 100).toFixed(1);
+    const pSai   = (saiMes / total3 * 100).toFixed(1);
+    document.getElementById('caixa-barra').innerHTML = `
+      <div style="width:${pEnt}%;background:#4ade80;transition:width .6s"></div>
+      <div style="width:${pSai}%;background:#ef4444;transition:width .6s"></div>
+    `;
+    document.getElementById('caixa-barra-legenda').innerHTML = `
+      <span><span style="color:var(--green)">■</span> Entradas ${pEnt}%</span>
+      <span><span style="color:var(--red)">■</span> Saídas ${pSai}%</span>
+    `;
+
+    // Rodapé com comparação e total
+    document.getElementById('caixa-rodape').innerHTML = `
+      <div style="font-size:.83rem;color:var(--muted)">
+        Mês anterior:
+        <strong style="color:var(--text)">${fmtRs(entMesAnt)}</strong> entradas /
+        <strong style="color:var(--text)">${fmtRs(saiMesAnt)}</strong> saídas
+      </div>
+      <div style="font-size:.83rem;color:var(--muted)">
+        Total geral:
+        <strong style="color:var(--text)">${(totalRegistros||0).toLocaleString('pt-BR')}</strong> movimentos
+      </div>
+    `;
+
+    // ─────────────────────────────────────────────
+    // Stats cards (totais da página + geral)
+    // ─────────────────────────────────────────────
+    let pgEnt = 0, pgSai = 0, pgCntEnt = 0, pgCntSai = 0;
+    for (const m of _caixaMovsAtual) {
+      const e = parseFloat(m.entrada) || 0;
+      const s = parseFloat(m.saida)   || 0;
+      pgEnt += e; pgSai += s;
+      if (e > 0) pgCntEnt++;
+      if (s > 0) pgCntSai++;
+    }
+    if (statsEl) statsEl.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(74,222,128,.1);color:var(--green)"><i class="fa-solid fa-arrow-down-to-bracket"></i></div>
+        <div class="stat-val" style="color:var(--green)">${fmtR(pgEnt)}</div>
+        <div class="stat-label">${pgCntEnt} entradas nesta pág.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(239,68,68,.1);color:var(--red)"><i class="fa-solid fa-arrow-up-from-bracket"></i></div>
+        <div class="stat-val" style="color:var(--red)">${fmtR(pgSai)}</div>
+        <div class="stat-label">${pgCntSai} saídas nesta pág.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(182,195,63,.1);color:var(--lemon)"><i class="fa-solid fa-scale-balanced"></i></div>
+        <div class="stat-val" style="color:${(pgEnt-pgSai)>=0?'var(--lemon)':'var(--red)'}">${fmtR(pgEnt-pgSai)}</div>
+        <div class="stat-label">Saldo desta pág.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(96,165,250,.1);color:var(--blue)"><i class="fa-solid fa-list"></i></div>
+        <div class="stat-val">${(totalRegistros||0).toLocaleString('pt-BR')}</div>
+        <div class="stat-label">Total de movimentos</div>
+      </div>
+    `;
+
+    // ─────────────────────────────────────────────
+    // Gráfico de barras (dados do servidor – últimos 30 dias)
+    // ─────────────────────────────────────────────
+    const ctxL = document.getElementById('caixa-chart-linha')?.getContext('2d');
+    if (ctxL && grafico?.length) {
+      if (_caixaChartLinha) _caixaChartLinha.destroy();
+      _caixaChartLinha = new Chart(ctxL, {
+        type: 'bar',
+        data: {
+          labels:   grafico.map(g => g.dia),
+          datasets: [
+            { label: 'Entradas', data: grafico.map(g => g.ent), backgroundColor: 'rgba(74,222,128,.55)', borderColor: '#4ade80', borderWidth: 1, borderRadius: 4 },
+            { label: 'Saídas',   data: grafico.map(g => g.sai), backgroundColor: 'rgba(239,68,68,.5)',   borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 },
+          ]
+        },
+        options: {
+          responsive: true, interaction: { mode: 'index' },
+          plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#6b7280', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+            y: { ticks: { color: '#6b7280', font: { size: 10 }, callback: v => `R$${Number(v).toLocaleString('pt-BR')}` }, grid: { color: 'rgba(255,255,255,.04)' } }
+          }
+        }
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    // Gráfico doughnut (mês atual)
+    // ─────────────────────────────────────────────
+    const ctxP = document.getElementById('caixa-chart-pizza')?.getContext('2d');
+    if (ctxP) {
+      if (_caixaChartPizza) _caixaChartPizza.destroy();
+      _caixaChartPizza = new Chart(ctxP, {
+        type: 'doughnut',
+        data: {
+          labels: ['Entradas', 'Saídas'],
+          datasets: [{ data: [entMes, saiMes], backgroundColor: ['rgba(74,222,128,.7)','rgba(239,68,68,.7)'], borderColor: ['#4ade80','#ef4444'], borderWidth: 2, hoverOffset: 6 }]
+        },
+        options: { responsive: true, cutout: '65%', plugins: { legend: { display: false } } }
+      });
+      const leg = document.getElementById('caixa-pizza-legenda');
+      if (leg) leg.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;gap:16px"><span><span style="color:var(--green)">■</span> Entradas</span><strong style="color:var(--green)">${fmtR(entMes)}</strong></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span><span style="color:var(--red)">■</span> Saídas</span><strong style="color:var(--red)">${fmtR(saiMes)}</strong></div>
+          <div style="display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--border);padding-top:6px"><span>Saldo</span><strong style="color:${saldoMes>=0?'var(--lemon)':'var(--red)'}">${fmtR(saldoMes)}</strong></div>
+        </div>`;
+    }
+
+    // ─────────────────────────────────────────────
+    // Tabela e paginação
+    // ─────────────────────────────────────────────
+    renderCaixaTabela();
+
+    const pag = document.getElementById('caixa-paginacao');
+    if (pag) {
+      const total  = _caixaTotalPags;
+      const cur    = _caixaPagina;
+      const pages  = new Set([1, total, cur-2, cur-1, cur, cur+1].filter(p => p>=1 && p<=total));
+      const sorted = [...pages].sort((a,b) => b-a);
+      const label  = p => total - p + 1;
+      let html = '';
+      if (cur < total) html += `<button class="btn-sm" onclick="carregarCaixa(${total})" title="Mais recentes"><i class="fa-solid fa-angles-left"></i></button>`;
+      if (cur < total) html += `<button class="btn-sm" onclick="carregarCaixa(${cur+1})" title="Anterior"><i class="fa-solid fa-angle-left"></i></button>`;
+      let prev = -1;
+      for (const p of sorted) {
+        if (prev !== -1 && prev - p > 1) html += `<span style="color:var(--muted);padding:0 4px">…</span>`;
+        html += `<button class="btn-sm ${p===cur?'lemon':''}" onclick="carregarCaixa(${p})">${label(p)}</button>`;
+        prev = p;
+      }
+      if (cur > 1) html += `<button class="btn-sm" onclick="carregarCaixa(${cur-1})" title="Próximo"><i class="fa-solid fa-angle-right"></i></button>`;
+      if (cur > 1) html += `<button class="btn-sm" onclick="carregarCaixa(1)" title="Mais antigos"><i class="fa-solid fa-angles-right"></i></button>`;
+      pag.innerHTML = `<span style="font-size:.78rem;color:var(--muted);align-self:center">Pág ${label(cur)} de ${total}:</span>` + html;
+    }
+  } catch(e) { toast('Erro caixa: ' + e.message, 'error'); }
+}
+
+function renderCaixaTabela() {
+  const tbody   = document.getElementById('caixa-tbody');
+  if (!tbody) return;
+  const busca   = (document.getElementById('caixa-busca')?.value || '').toLowerCase();
+  const tipoFil = document.getElementById('caixa-tipo-filtro')?.value || '';
+  const fmtRv   = v => parseFloat(v||0) > 0 ? `R$ ${parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '—';
+
+  const filtrado = _caixaMovsAtual.filter(m => {
+    const hist = (m.historico||'').toLowerCase();
+    if (busca && !hist.includes(busca)) return false;
+    if (tipoFil === 'entrada' && !(parseFloat(m.entrada) > 0)) return false;
+    if (tipoFil === 'saida'   && !(parseFloat(m.saida)   > 0)) return false;
+    return true;
+  });
+
+  if (!filtrado.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-inbox"></i>Nenhum movimento</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtrado.map(m => {
+    const ent = parseFloat(m.entrada) || 0;
+    const sai = parseFloat(m.saida)   || 0;
+    return `<tr>
+      <td style="font-size:.82rem">${m.historico||'—'}</td>
+      <td style="color:var(--green);font-weight:${ent>0?700:400}">${fmtRv(m.entrada)}</td>
+      <td style="color:var(--red);font-weight:${sai>0?700:400}">${fmtRv(m.saida)}</td>
+      <td><span class="badge badge-muted">${m.tipomov||'—'}</span></td>
+      <td style="font-size:.75rem;color:var(--muted)">${(m.data||'').slice(0,16)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarCaixaTabela() { renderCaixaTabela(); }
+
+// ── Clientes ──────────────────────────────────────────
+let _buscarTimer;
+function buscarClientes() {
+  clearTimeout(_buscarTimer);
+  _buscarTimer = setTimeout(carregarClientes, 300);
+}
+
+async function carregarClientes() {
+  const busca = document.getElementById('busca-cliente')?.value || '';
+  const tbody = document.getElementById('clientes-tbody');
+  try {
+    const d = await req('GET', `${API}/clientes?busca=${encodeURIComponent(busca)}`);
+    if (!d.clientes.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="fa-solid fa-users-slash"></i>Nenhum cliente encontrado</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = d.clientes.map(c => `
+      <tr>
+        <td><strong>${c.login}</strong></td>
+        <td>${nivelBadge(c.nivel)}</td>
+        <td><strong style="color:var(--lemon)">${c.points}</strong></td>
+        <td>${c.totalEarned}</td>
+        <td>${c.missoes}</td>
+        <td>${c.referrals}</td>
+        <td style="color:var(--muted);font-size:.75rem">${fmtData(c.updatedAt)}</td>
+        <td><button class="btn-sm lemon" onclick="abrirCliente('${c.login}')"><i class="fa-solid fa-pen"></i> Gerenciar</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+// ── Painel de cliente ──────────────────────────────────────────
+async function abrirCliente(login) {
+  const panel   = document.getElementById('cliente-panel');
+  const overlay = document.getElementById('overlay');
+  const content = document.getElementById('panel-content');
+  content.innerHTML = `<div style="text-align:center;padding:40px"><div class="spinner"></div></div>`;
+  panel.classList.add('open');
+  overlay.classList.add('show');
+
+  try {
+    const d = await req('GET', `${API}/cliente/${login}`);
+    _clienteAtual = login;
+    const nivel = d.nivel || { label: 'Bronze' };
+    const logHtml = (d.log || []).slice(0, 15).map(l => `
+      <div class="log-item">
+        <span class="log-desc">${l.descricao || '—'}</span>
+        <span class="log-pts" style="color:${l.pontos>0?'var(--green)':'var(--red)'}">${l.pontos>0?'+':''}${l.pontos}</span>
+        <span class="log-data">${fmtData(l.data)}</span>
+      </div>`).join('') || '<div class="empty"><i class="fa-solid fa-clock"></i>Sem histórico</div>';
+
+    const missoesOpts = _missoesList.map(m =>
+      `<option value="${m.id}"${d.completedMissions.includes(m.id)?' disabled':''}>
+        ${d.completedMissions.includes(m.id)?'✓ ':''} [${m.categoria}] ${m.label} (+${m.pts}pts)
+      </option>`
+    ).join('');
+
+    content.innerHTML = `
+      <div class="panel-avatar">${login.charAt(0).toUpperCase()}</div>
+      <div class="panel-login">${login}</div>
+      <div class="panel-nivel">${nivel.icon||'🥉'} ${nivel.label||'Bronze'} · ${d.streak} faturas em dia</div>
+
+      <div class="panel-stats">
+        <div class="panel-stat"><div class="val">${d.points}</div><div class="lbl">Pontos</div></div>
+        <div class="panel-stat"><div class="val">${d.totalEarned}</div><div class="lbl">Total ganho</div></div>
+        <div class="panel-stat"><div class="val">${(d.completedMissions||[]).length}</div><div class="lbl">Missões</div></div>
+      </div>
+
+      <div class="panel-section">
+        <h4>Ajustar pontos</h4>
+        <div class="action-row">
+          <input class="pts-input" id="pts-val" type="number" placeholder="Ex: 50 ou -20"/>
+          <input class="pts-input" id="pts-motivo" type="text" placeholder="Motivo" style="flex:2"/>
+          <button class="btn-sm lemon" onclick="ajustarPontos()"><i class="fa-solid fa-plus-minus"></i> Aplicar</button>
+        </div>
+        <div id="pts-msg"></div>
+      </div>
+
+      <div class="panel-section">
+        <h4>Conceder missão</h4>
+        <select class="missao-select" id="missao-select">${missoesOpts}</select>
+        <button class="btn-sm lemon" onclick="concederMissao()"><i class="fa-solid fa-check"></i> Conceder</button>
+        <div id="missao-msg"></div>
+      </div>
+
+      <div class="panel-section">
+        <h4>Reset</h4>
+        <div class="action-row">
+          <button class="btn-sm red" onclick="resetCliente('pontos')"><i class="fa-solid fa-coins"></i> Zerar pontos</button>
+          <button class="btn-sm red" onclick="resetCliente('missoes')"><i class="fa-solid fa-list-check"></i> Zerar missões</button>
+          <button class="btn-sm red" onclick="resetCliente('tudo')"><i class="fa-solid fa-trash"></i> Zerar tudo</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h4>Histórico de pontos (últimos 15)</h4>
+        ${logHtml}
+      </div>
+    `;
+  } catch(e) {
+    content.innerHTML = `<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>${e.message}</div>`;
+  }
+}
+
+function fecharPainel() {
+  document.getElementById('cliente-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  _clienteAtual = null;
+}
+
+async function ajustarPontos() {
+  const pts    = parseInt(document.getElementById('pts-val').value);
+  const motivo = document.getElementById('pts-motivo').value.trim();
+  const msg    = document.getElementById('pts-msg');
+  if (!pts || isNaN(pts)) { msg.className='panel-msg err'; msg.textContent='Informe uma quantidade.'; return; }
+  try {
+    const d = await req('POST', `${API}/cliente/${_clienteAtual}/pontos`, { pts, motivo });
+    msg.className = 'panel-msg ok'; msg.textContent = `✓ Aplicado! Saldo atual: ${d.points} pts`;
+    toast(`Pontos ajustados para ${_clienteAtual}`, 'success');
+    carregarClientes(); carregarStats();
+  } catch(e) { msg.className='panel-msg err'; msg.textContent=e.message; }
+}
+
+async function concederMissao() {
+  const missaoId = document.getElementById('missao-select').value;
+  const msg = document.getElementById('missao-msg');
+  try {
+    const d = await req('POST', `${API}/cliente/${_clienteAtual}/missao`, { missaoId });
+    if (d.jaCompleta) { msg.className='panel-msg err'; msg.textContent='Missão já concluída.'; return; }
+    msg.className = 'panel-msg ok'; msg.textContent = `✓ +${d.pts} pts concedidos!`;
+    toast(`Missão concedida a ${_clienteAtual}`, 'success');
+    abrirCliente(_clienteAtual); carregarStats();
+  } catch(e) { msg.className='panel-msg err'; msg.textContent=e.message; }
+}
+
+async function resetCliente(tipo) {
+  const labels = { pontos:'zerar os pontos', missoes:'zerar as missões', tudo:'APAGAR TUDO' };
+  if (!confirm(`Tem certeza que deseja ${labels[tipo]} do cliente "${_clienteAtual}"?`)) return;
+  try {
+    await req('POST', `${API}/cliente/${_clienteAtual}/reset`, {
+      resetPontos:  tipo === 'pontos' || tipo === 'tudo',
+      resetMissoes: tipo === 'missoes' || tipo === 'tudo',
+      resetTudo:    tipo === 'tudo',
+    });
+    toast(`Reset aplicado em ${_clienteAtual}`, 'success');
+    fecharPainel(); carregarClientes(); carregarStats();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Missões ──────────────────────────────────────────
+async function carregarMissoes() {
+  const tbody = document.getElementById('missoes-tbody');
+  try {
+    const d = await req('GET', `${API}/missoes`);
+    _missoesList = d.missoes;
+    const catColors = {
+      'Exploração':'badge-blue','App & Perfil':'badge-lemon','Velocidade':'badge-orange',
+      'Fidelidade':'badge-green','Indicações':'badge-muted','Conquistas':'badge-orange',
+    };
+    tbody.innerHTML = d.missoes.map(m => `
+      <tr>
+        <td><code style="font-size:.75rem;color:var(--muted)">${m.id}</code></td>
+        <td><strong>${m.label}</strong></td>
+        <td><span class="badge ${catColors[m.categoria]||'badge-muted'}">${m.categoria}</span></td>
+        <td><strong style="color:var(--lemon)">+${m.pts}</strong></td>
+        <td>${m.auto ? '<span class="badge badge-green">automático</span>' : '<span class="badge badge-muted">manual</span>'}</td>
+      </tr>
+    `).join('');
+  } catch(e) { toast('Erro ao carregar missões: ' + e.message, 'error'); }
+}
+
+// ── MK Clientes ──────────────────────────────────────────
+let _mkPagina = 1;
+async function carregarMkClientes(pagina = 1) {
+  _mkPagina = pagina;
+  const busca = document.getElementById('mk-busca')?.value || '';
+  const tbody = document.getElementById('mk-clientes-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="spinner"></div></div></td></tr>`;
+  try {
+    const d = await req('GET', `${API}/mk/clientes?pagina=${pagina}&busca=${encodeURIComponent(busca)}`);
+    const clientes = d.dados || d.clientes || [];
+    if (!clientes.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-users-slash"></i>Nenhum cliente encontrado</div></td></tr>`;
+    } else {
+      tbody.innerHTML = clientes.map(c => {
+        const tipoMap = {
+          pppoe:   '<span class="badge badge-blue">PPPoE</span>',
+          hotspot: '<span class="badge badge-orange">Hotspot</span>',
+          ativo:   '<span class="badge badge-green">Ativo</span>',
+        };
+        const tipo  = tipoMap[c.tipo?.toLowerCase()] || (c.tipo ? `<span class="badge badge-muted">${c.tipo}</span>` : '<span class="badge badge-muted">—</span>');
+        const plano = c.plano || '—';
+        return `<tr>
+          <td><strong>${c.login}</strong></td>
+          <td>${c.nome || c.nome_res || '—'}</td>
+          <td style="color:var(--muted);font-size:.82rem">${c.email || '—'}</td>
+          <td>${c.cidade || '—'}</td>
+          <td>${tipo}</td>
+          <td style="color:var(--lemon);font-size:.82rem">${plano}</td>
+          <td>
+            <button class="btn-sm lemon" onclick="abrirEditarCliente(${JSON.stringify(JSON.stringify(c))})"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-sm" style="background:rgba(96,165,250,.15);color:#60a5fa" onclick="enviarMensagemParaCliente('${c.login}')"><i class="fa-solid fa-paper-plane"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+    // paginação
+    const pag = document.getElementById('mk-paginacao');
+    if (pag) {
+      const total = d.total_paginas || d.paginas || 1;
+      pag.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(p =>
+        `<button class="btn-sm ${p===pagina?'lemon':''}" onclick="carregarMkClientes(${p})">${p}</button>`
+      ).join('');
+    }
+  } catch(e) { toast('Erro MK Clientes: ' + e.message, 'error'); if(tbody) tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Erro ao carregar</div></td></tr>`; }
+}
+
+function enviarMensagemParaCliente(login) {
+  navAdmin('mensagens');
+  setTimeout(() => {
+    ['email-login','sms-login','zap-login'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = login;
+    });
+  }, 200);
+}
+
+// Modal novo cliente
+let _editandoCliente = null;
+function abrirModalNovoCliente() {
+  _editandoCliente = null;
+  showModal(`
+    <h3 style="margin-bottom:20px"><i class="fa-solid fa-user-plus" style="color:var(--lemon)"></i> Novo Cliente</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Nome *</label><input class="form-input" id="nc-nome" placeholder="Nome completo"/></div>
+      <div class="form-group"><label>Login *</label><input class="form-input" id="nc-login" placeholder="Login do acesso"/></div>
+      <div class="form-group"><label>Senha *</label><input class="form-input" id="nc-senha" placeholder="Senha" type="password"/></div>
+      <div class="form-group"><label>CPF *</label><input class="form-input" id="nc-cpf" placeholder="000.000.000-00"/></div>
+      <div class="form-group"><label>Email</label><input class="form-input" id="nc-email" placeholder="email@exemplo.com" type="email"/></div>
+      <div class="form-group"><label>Telefone</label><input class="form-input" id="nc-telefone" placeholder="(00) 00000-0000"/></div>
+      <div class="form-group"><label>Celular</label><input class="form-input" id="nc-celular" placeholder="(00) 00000-0000"/></div>
+      <div class="form-group"><label>Data Nasc.</label><input class="form-input" id="nc-nasc" placeholder="dd/mm/aaaa"/></div>
+      <div class="form-group"><label>Endereço</label><input class="form-input" id="nc-endereco" placeholder="Rua..."/></div>
+      <div class="form-group"><label>Número</label><input class="form-input" id="nc-numero" placeholder="Ex: 123"/></div>
+      <div class="form-group"><label>Bairro</label><input class="form-input" id="nc-bairro" placeholder="Bairro"/></div>
+      <div class="form-group"><label>CEP</label><input class="form-input" id="nc-cep" placeholder="00000-000"/></div>
+      <div class="form-group"><label>Cidade</label><input class="form-input" id="nc-cidade" placeholder="Cidade"/></div>
+      <div class="form-group"><label>Estado</label><input class="form-input" id="nc-estado" placeholder="Ex: SP"/></div>
+    </div>
+    <div id="nc-erro" style="color:var(--red);font-size:.85rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="salvarNovoCliente()">Criar cliente</button>
+    </div>
+  `);
+}
+
+async function salvarNovoCliente() {
+  const campo = id => document.getElementById(id)?.value?.trim() || '';
+  const erro = document.getElementById('nc-erro');
+  const body = { nome: campo('nc-nome'), login: campo('nc-login'), senha: campo('nc-senha'), cpf: campo('nc-cpf'),
+    email: campo('nc-email'), telefone: campo('nc-telefone'), celular: campo('nc-celular'),
+    data_nasc: campo('nc-nasc'), endereco: campo('nc-endereco'), numero: campo('nc-numero'),
+    bairro: campo('nc-bairro'), cep: campo('nc-cep'), cidade: campo('nc-cidade'), estado: campo('nc-estado') };
+  if (!body.nome || !body.login || !body.senha || !body.cpf) {
+    erro.textContent = 'Preencha nome, login, senha e CPF.'; erro.style.display='block'; return;
+  }
+  try {
+    await req('POST', `${API}/mk/cliente/inserir`, body);
+    toast('Cliente criado com sucesso!');
+    closeModal();
+    carregarMkClientes();
+  } catch(e) { erro.textContent = e.message; erro.style.display='block'; }
+}
+
+function abrirEditarCliente(clienteJson) {
+  const c = JSON.parse(clienteJson);
+  _editandoCliente = c.login;
+  showModal(`
+    <h3 style="margin-bottom:20px"><i class="fa-solid fa-user-pen" style="color:var(--lemon)"></i> Editar — ${c.login}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Nome</label><input class="form-input" id="ec-nome" value="${c.nome||''}"/></div>
+      <div class="form-group"><label>Email</label><input class="form-input" id="ec-email" value="${c.email||''}" type="email"/></div>
+      <div class="form-group"><label>Telefone</label><input class="form-input" id="ec-telefone" value="${c.telefone||''}"/></div>
+      <div class="form-group"><label>Celular</label><input class="form-input" id="ec-celular" value="${c.celular||''}"/></div>
+      <div class="form-group"><label>Endereço</label><input class="form-input" id="ec-endereco" value="${c.endereco||''}"/></div>
+      <div class="form-group"><label>Número</label><input class="form-input" id="ec-numero" value="${c.numero||''}"/></div>
+      <div class="form-group"><label>Bairro</label><input class="form-input" id="ec-bairro" value="${c.bairro||''}"/></div>
+      <div class="form-group"><label>CEP</label><input class="form-input" id="ec-cep" value="${c.cep||''}"/></div>
+      <div class="form-group"><label>Cidade</label><input class="form-input" id="ec-cidade" value="${c.cidade||''}"/></div>
+      <div class="form-group"><label>Estado</label><input class="form-input" id="ec-estado" value="${c.estado||''}"/></div>
+    </div>
+    <input type="hidden" id="ec-login" value="${c.login}"/>
+    <div id="ec-erro" style="color:var(--red);font-size:.85rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="salvarEdicaoCliente()">Salvar alterações</button>
+    </div>
+  `);
+}
+
+async function salvarEdicaoCliente() {
+  const campo = id => document.getElementById(id)?.value?.trim() || '';
+  const erro = document.getElementById('ec-erro');
+  const body = { login: campo('ec-login'), nome: campo('ec-nome'), email: campo('ec-email'),
+    telefone: campo('ec-telefone'), celular: campo('ec-celular'), endereco: campo('ec-endereco'),
+    numero: campo('ec-numero'), bairro: campo('ec-bairro'), cep: campo('ec-cep'),
+    cidade: campo('ec-cidade'), estado: campo('ec-estado') };
+  try {
+    await req('PUT', `${API}/mk/cliente/editar`, body);
+    toast('Cliente atualizado!');
+    closeModal();
+    carregarMkClientes(_mkPagina);
+  } catch(e) { erro.textContent = e.message; erro.style.display='block'; }
+}
+
+// ── Chamados ──────────────────────────────────────────
+let _chamadosPagina = 1;
+async function carregarChamados(pagina = 1) {
+  _chamadosPagina = pagina;
+  const status = document.getElementById('chamado-status')?.value || '';
+  const tbody = document.getElementById('chamados-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="spinner"></div></div></td></tr>`;
+  try {
+    const d = await req('GET', `${API}/mk/chamados?pagina=${pagina}&status=${status}`);
+    const chamados = d.dados || d.chamados || [];
+    if (!chamados.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-ticket-slash"></i>Nenhum chamado encontrado</div></td></tr>`;
+    } else {
+      const priorCor = { alta: '#ef4444', normal: '#fb923c', baixa: '#4ade80' };
+      tbody.innerHTML = chamados.map(c => `<tr>
+        <td><code style="font-size:.78rem">${c.chamado||c.numero||'—'}</code></td>
+        <td><strong>${c.login||'—'}</strong></td>
+        <td>${c.assunto||'—'}</td>
+        <td><span style="color:${priorCor[c.prioridade]||'var(--muted)'}">●</span> ${c.prioridade||'—'}</td>
+        <td>${c.status==='aberto'?'<span class="badge badge-green">Aberto</span>':'<span class="badge badge-muted">Fechado</span>'}</td>
+        <td style="color:var(--muted);font-size:.75rem">${fmtData(c.data||c.criado)}</td>
+        <td style="display:flex;gap:4px">
+          <button class="btn-sm lemon" onclick="verChamado('${c.chamado||c.numero}')"><i class="fa-solid fa-eye"></i></button>
+          ${c.status==='aberto'
+            ? `<button class="btn-sm" style="background:rgba(239,68,68,.15);color:#ef4444" onclick="fecharChamadoPrompt('${c.chamado||c.numero}')"><i class="fa-solid fa-xmark"></i></button>`
+            : `<button class="btn-sm" style="background:rgba(74,222,128,.1);color:#4ade80" onclick="reabrirChamado('${c.chamado||c.numero}')"><i class="fa-solid fa-rotate"></i></button>`}
+          <button class="btn-sm" style="background:rgba(239,68,68,.1);color:#ef4444" onclick="deletarChamado('${c.chamado||c.numero}')"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>`).join('');
+    }
+    const pag = document.getElementById('chamados-paginacao');
+    if (pag) {
+      const total = d.total_paginas || d.paginas || 1;
+      pag.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(p =>
+        `<button class="btn-sm ${p===pagina?'lemon':''}" onclick="carregarChamados(${p})">${p}</button>`
+      ).join('');
+    }
+  } catch(e) { toast('Erro chamados: ' + e.message, 'error'); }
+}
+
+async function verChamado(numero) {
+  try {
+    const d = await req('GET', `${API}/mk/chamado/${numero}`);
+    const c = d.dados || d;
+    const priorCor = { alta: '#ef4444', normal: '#fb923c', baixa: '#4ade80' };
+    showModal(`
+      <h3 style="margin-bottom:16px"><i class="fa-solid fa-headset" style="color:var(--lemon)"></i> Chamado #${numero}</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div class="form-group"><label>Login</label><div class="form-input" style="opacity:.7">${c.login||'—'}</div></div>
+        <div class="form-group"><label>Assunto</label><div class="form-input" style="opacity:.7">${c.assunto||'—'}</div></div>
+        <div class="form-group"><label>Prioridade</label>
+          <select class="form-input" id="ch-prio">
+            <option value="baixa" ${c.prioridade==='baixa'?'selected':''}>Baixa</option>
+            <option value="normal" ${c.prioridade==='normal'?'selected':''}>Normal</option>
+            <option value="alta" ${c.prioridade==='alta'?'selected':''}>Alta</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Status</label><div class="form-input" style="opacity:.7">${c.status||'—'}</div></div>
+      </div>
+      <div class="form-group"><label>Mensagem</label><div class="form-input" style="opacity:.7;white-space:pre-wrap;min-height:80px">${c.mensagem||c.descricao||'—'}</div></div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button class="btn-sm" onclick="closeModal()">Fechar</button>
+        <button class="btn-primary" onclick="editarChamadoPrio('${numero}')">Salvar prioridade</button>
+      </div>
+    `);
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function editarChamadoPrio(numero) {
+  const prio = document.getElementById('ch-prio')?.value;
+  try {
+    await req('PUT', `${API}/mk/chamado/editar`, { chamado: numero, prioridade: prio });
+    toast('Prioridade atualizada!');
+    closeModal();
+    carregarChamados(_chamadosPagina);
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+function fecharChamadoPrompt(numero) {
+  showModal(`
+    <h3 style="margin-bottom:16px"><i class="fa-solid fa-xmark-circle" style="color:var(--red)"></i> Fechar chamado #${numero}</h3>
+    <div class="form-group"><label>Motivo do fechamento</label>
+      <textarea class="form-input" id="motivo-fechar" rows="4" placeholder="Descreva o motivo..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" style="background:var(--red)" onclick="fecharChamado('${numero}')">Confirmar fechamento</button>
+    </div>
+  `);
+}
+
+async function fecharChamado(numero) {
+  const motivo = document.getElementById('motivo-fechar')?.value?.trim();
+  if (!motivo) { toast('Informe o motivo', 'error'); return; }
+  try {
+    await req('PUT', `${API}/mk/chamado/fechar`, { chamado: numero, motivo });
+    toast('Chamado fechado!');
+    closeModal();
+    carregarChamados(_chamadosPagina);
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function reabrirChamado(numero) {
+  if (!confirm(`Reabrir chamado #${numero}?`)) return;
+  try {
+    await req('GET', `${API}/mk/chamado/reabrir/${numero}`);
+    toast('Chamado reaberto!');
+    carregarChamados(_chamadosPagina);
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+async function deletarChamado(numero) {
+  if (!confirm(`Excluir chamado #${numero}? Essa ação não pode ser desfeita.`)) return;
+  try {
+    await req('DELETE', `${API}/mk/chamado/${numero}`);
+    toast('Chamado removido!');
+    carregarChamados(_chamadosPagina);
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+function abrirModalNovoChamado() {
+  showModal(`
+    <h3 style="margin-bottom:20px"><i class="fa-solid fa-ticket" style="color:var(--lemon)"></i> Novo Chamado</h3>
+    <div class="form-group"><label>Login do cliente *</label><input class="form-input" id="nc-ch-login" placeholder="Login"/></div>
+    <div class="form-group"><label>Assunto *</label>
+      <select class="form-input" id="nc-ch-assunto">
+        <option>Financeiro</option><option>Dúvidas</option><option>Conexão</option>
+        <option>Cadastro</option><option>Crítica</option><option>Sugestão</option>
+        <option>Transferencia</option><option>Cancelamento</option><option>Outros</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Prioridade *</label>
+      <select class="form-input" id="nc-ch-prio">
+        <option value="baixa">Baixa</option>
+        <option value="normal" selected>Normal</option>
+        <option value="alta">Alta</option>
+      </select>
+    </div>
+    <div id="nc-ch-erro" style="color:var(--red);font-size:.85rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="salvarNovoChamado()">Criar chamado</button>
+    </div>
+  `);
+}
+
+async function salvarNovoChamado() {
+  const login   = document.getElementById('nc-ch-login')?.value?.trim();
+  const assunto = document.getElementById('nc-ch-assunto')?.value;
+  const prioridade = document.getElementById('nc-ch-prio')?.value;
+  const erro = document.getElementById('nc-ch-erro');
+  if (!login) { erro.textContent = 'Informe o login.'; erro.style.display='block'; return; }
+  try {
+    await req('POST', `${API}/mk/chamado/inserir`, { login, assunto, prioridade });
+    toast('Chamado criado!');
+    closeModal();
+    carregarChamados();
+  } catch(e) { erro.textContent = e.message; erro.style.display='block'; }
+}
+
+// ── Mensagens ──────────────────────────────────────────
+function msgFeedback(id, texto, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = texto;
+  el.style.display = 'block';
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function enviarEmail() {
+  const login   = document.getElementById('email-login')?.value?.trim();
+  const assunto = document.getElementById('email-assunto')?.value?.trim();
+  const mensagem = document.getElementById('email-msg')?.value?.trim();
+  if (!login || !assunto || !mensagem) { msgFeedback('email-res', 'Preencha todos os campos.', false); return; }
+  try {
+    await req('POST', `${API}/mk/mensagem/email`, { login, assunto, mensagem });
+    msgFeedback('email-res', 'E-mail enviado com sucesso!', true);
+  } catch(e) { msgFeedback('email-res', 'Erro: ' + e.message, false); }
+}
+
+async function enviarSMS() {
+  const login    = document.getElementById('sms-login')?.value?.trim();
+  const mensagem = document.getElementById('sms-msg')?.value?.trim();
+  if (!login || !mensagem) { msgFeedback('sms-res', 'Preencha todos os campos.', false); return; }
+  try {
+    await req('POST', `${API}/mk/mensagem/sms`, { login, mensagem });
+    msgFeedback('sms-res', 'SMS enviado!', true);
+  } catch(e) { msgFeedback('sms-res', 'Erro: ' + e.message, false); }
+}
+
+async function enviarZap() {
+  const login    = document.getElementById('zap-login')?.value?.trim();
+  const mensagem = document.getElementById('zap-msg')?.value?.trim();
+  if (!login || !mensagem) { msgFeedback('zap-res', 'Preencha todos os campos.', false); return; }
+  try {
+    await req('POST', `${API}/mk/mensagem/zap`, { login, mensagem });
+    msgFeedback('zap-res', 'WhatsApp enviado!', true);
+  } catch(e) { msgFeedback('zap-res', 'Erro: ' + e.message, false); }
+}
+
+// ── Planos ──────────────────────────────────────────
+async function carregarPlanos() {
+  const tbody = document.getElementById('planos-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="spinner"></div></div></td></tr>`;
+  try {
+    const d = await req('GET', `${API}/mk/planos`);
+    const planos = d.dados || d.planos || [];
+    if (!planos.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-layer-group"></i>Nenhum plano encontrado</div></td></tr>`;
+    } else {
+      tbody.innerHTML = planos.map(p => {
+        const dl = Number(p.veldown || 0);
+        const ul = Number(p.velup || 0);
+        const fmtVel = v => v >= 1000 ? `${(v/1000).toFixed(0)} Mbps` : `${v} Kbps`;
+        return `<tr>
+          <td><strong>${p.nome||p.titulo||'—'}</strong></td>
+          <td>${p.tipo||'—'}</td>
+          <td><span style="color:var(--lemon)">⬇ ${fmtVel(dl)}</span></td>
+          <td><span style="color:var(--blue)">⬆ ${fmtVel(ul)}</span></td>
+          <td><strong style="color:var(--green)">R$ ${p.valor||'—'}</strong></td>
+          <td>
+            <button class="btn-sm lemon" onclick="abrirEditarPlano(${JSON.stringify(JSON.stringify(p))})"><i class="fa-solid fa-pen"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  } catch(e) { toast('Erro planos: ' + e.message, 'error'); }
+}
+
+function abrirModalNovoPlano() {
+  showModal(gerarFormularioPlano(null));
+}
+
+function abrirEditarPlano(planoJson) {
+  const p = JSON.parse(planoJson);
+  showModal(gerarFormularioPlano(p));
+}
+
+function gerarFormularioPlano(p) {
+  const v = (id, def='') => p ? (p[id] || def) : def;
+  return `
+    <h3 style="margin-bottom:20px"><i class="fa-solid fa-layer-group" style="color:var(--lemon)"></i> ${p ? 'Editar' : 'Novo'} Plano</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Nome *</label><input class="form-input" id="pl-nome" value="${v('nome')}"/></div>
+      <div class="form-group"><label>Título boleto</label><input class="form-input" id="pl-titulo" value="${v('titulo')}"/></div>
+      <div class="form-group"><label>Tipo *</label>
+        <select class="form-input" id="pl-tipo">
+          <option value="dedicado" ${v('tipo')==='dedicado'?'selected':''}>Dedicado</option>
+          <option value="semi-dedicado" ${v('tipo')==='semi-dedicado'?'selected':''}>Semi-dedicado</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor (R$) *</label><input class="form-input" id="pl-valor" placeholder="Ex: 89.90" value="${v('valor')}"/></div>
+      <div class="form-group"><label>Download (Kbps) *</label><input class="form-input" id="pl-veldown" placeholder="Ex: 100000" value="${v('veldown')}"/></div>
+      <div class="form-group"><label>Upload (Kbps) *</label><input class="form-input" id="pl-velup" placeholder="Ex: 100000" value="${v('velup')}"/></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Descrição</label>
+        <textarea class="form-input" id="pl-descricao" rows="3">${v('descricao')}</textarea>
+      </div>
+    </div>
+    ${p ? `<input type="hidden" id="pl-uuid" value="${p.uuid||''}"/>` : ''}
+    <div id="pl-erro" style="color:var(--red);font-size:.85rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="${p ? 'salvarEdicaoPlano()' : 'salvarNovoPlano()'}">
+        ${p ? 'Salvar alterações' : 'Criar plano'}
+      </button>
+    </div>
+  `;
+}
+
+function coletarDadosPlano() {
+  const g = id => document.getElementById(id)?.value?.trim() || '';
+  return { nome: g('pl-nome'), titulo: g('pl-titulo'), tipo: g('pl-tipo'), valor: g('pl-valor'),
+           veldown: g('pl-veldown'), velup: g('pl-velup'), descricao: g('pl-descricao') };
+}
+
+async function salvarNovoPlano() {
+  const body = coletarDadosPlano();
+  const erro = document.getElementById('pl-erro');
+  if (!body.nome || !body.valor || !body.veldown || !body.velup) { erro.textContent = 'Preencha os campos obrigatórios.'; erro.style.display='block'; return; }
+  try {
+    await req('POST', `${API}/mk/plano/inserir`, body);
+    toast('Plano criado!');
+    closeModal();
+    carregarPlanos();
+  } catch(e) { erro.textContent = e.message; erro.style.display='block'; }
+}
+
+async function salvarEdicaoPlano() {
+  const body = { ...coletarDadosPlano(), uuid: document.getElementById('pl-uuid')?.value };
+  const erro = document.getElementById('pl-erro');
+  if (!body.uuid) { erro.textContent = 'UUID do plano não encontrado.'; erro.style.display='block'; return; }
+  try {
+    await req('PUT', `${API}/mk/plano/editar`, body);
+    toast('Plano atualizado!');
+    closeModal();
+    carregarPlanos();
+  } catch(e) { erro.textContent = e.message; erro.style.display='block'; }
+}
+
+// ── Modal genérico ──────────────────────────────────────────
+function showModal(html) {
+  let m = document.getElementById('gen-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'gen-modal';
+    m.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px`;
+    m.addEventListener('click', e => { if(e.target===m) closeModal(); });
+    document.body.appendChild(m);
+  }
+  m.innerHTML = `<div style="background:var(--card);border-radius:var(--radius);padding:28px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border)">${html}</div>`;
+  m.style.display = 'flex';
+}
+
+function closeModal() {
+  const m = document.getElementById('gen-modal');
+  if (m) m.style.display = 'none';
+}
+
+// ── Limpeza de títulos ──────────────────────────────────────────
+let _limpezaTotal = 0;
+
+async function previewLimpeza() {
+  const ano    = document.getElementById('limpeza-ano')?.value || 2022;
+  const status = document.getElementById('limpeza-status')?.value || 'aberto';
+  const tbody  = document.getElementById('limpeza-tbody');
+  const count  = document.getElementById('limpeza-count');
+  const resumo = document.getElementById('limpeza-resumo');
+  const prev   = document.getElementById('limpeza-preview');
+  const prog   = document.getElementById('limpeza-progresso');
+  const res    = document.getElementById('limpeza-resultado');
+
+  if (tbody)  tbody.innerHTML  = `<tr><td colspan="4"><div class="empty"><div class="spinner"></div>Buscando...</div></td></tr>`;
+  if (prev)   prev.style.display   = 'none';
+  if (prog)   prog.style.display   = 'none';
+  if (res)    res.style.display    = 'none';
+  if (count)  count.textContent    = '';
+
+  try {
+    const d = await req('GET', `${API}/mk/titulos/limpeza/preview?ateAno=${ano}&status=${status}`);
+    _limpezaTotal = d.total;
+    const fmtR = v => `R$ ${parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+    const statusLabel = { aberto: 'em aberto', vencido: 'vencidos', ambos: 'em aberto + vencidos' }[status] || status;
+
+    if (count) count.textContent = `(${d.total} encontrados)`;
+
+    if (resumo) resumo.innerHTML = `
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div><div style="font-size:1.4rem;font-weight:800;color:var(--red)">${d.total}</div><div style="font-size:.72rem;color:var(--muted)">títulos ${statusLabel}</div></div>
+        <div><div style="font-size:1.4rem;font-weight:800;color:var(--orange)">${fmtR(d.totalValor)}</div><div style="font-size:.72rem;color:var(--muted)">valor total</div></div>
+        <div><div style="font-size:1rem;font-weight:700;color:var(--muted)">até ${ano}</div><div style="font-size:.72rem;color:var(--muted)">vencimento</div></div>
+      </div>
+      ${d.total > 100 ? `<div style="margin-top:8px;font-size:.75rem;color:var(--muted)">⚠️ Mostrando primeiros 100 registros na tabela. Todos os ${d.total} serão deletados.</div>` : ''}
+    `;
+
+    if (tbody) {
+      if (!d.titulos.length) {
+        tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-check-circle" style="color:var(--green)"></i>Nenhum título encontrado para esse período</div></td></tr>`;
+      } else {
+        tbody.innerHTML = d.titulos.map(t => `<tr>
+          <td><strong>${t.login||'—'}</strong></td>
+          <td><span class="badge badge-muted">${t.tipo||'—'}</span></td>
+          <td style="color:var(--orange);font-weight:600">${fmtR(t.valor)}</td>
+          <td style="font-size:.78rem;color:var(--muted)">${(t.datavenc||'').slice(0,10)}</td>
+        </tr>`).join('');
+      }
+    }
+
+    if (d.total > 0 && prev) prev.style.display = 'block';
+    const confirmarInput = document.getElementById('limpeza-confirmar');
+    if (confirmarInput) confirmarInput.value = '';
+
+  } catch(e) { toast('Erro ao buscar: ' + e.message, 'error'); }
+}
+
+async function executarLimpeza() {
+  const ano       = document.getElementById('limpeza-ano')?.value || 2022;
+  const status    = document.getElementById('limpeza-status')?.value || 'aberto';
+  const confirmar = document.getElementById('limpeza-confirmar')?.value?.trim();
+  const prev      = document.getElementById('limpeza-preview');
+  const prog      = document.getElementById('limpeza-progresso');
+  const res       = document.getElementById('limpeza-resultado');
+
+  if (confirmar !== 'CONFIRMAR') {
+    toast('Digite CONFIRMAR exatamente para prosseguir.', 'error');
+    return;
+  }
+  const statusLabel = { aberto: 'em aberto', vencido: 'vencidos', ambos: 'em aberto + vencidos' }[status] || status;
+  if (!confirm(`Você está prestes a deletar ${_limpezaTotal} títulos ${statusLabel} até ${ano}.\n\nEssa ação é IRREVERSÍVEL. Tem certeza absoluta?`)) return;
+
+  if (prev) prev.style.display = 'none';
+  if (prog) prog.style.display = 'block';
+  if (res)  res.style.display  = 'none';
+
+  try {
+    const d = await req('DELETE', `${API}/mk/titulos/limpeza`, { confirmar: 'CONFIRMAR', ateAno: ano, status });
+    if (prog) prog.style.display = 'none';
+    if (res) {
+      res.style.display = 'block';
+      res.innerHTML = `
+        <div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:10px;padding:16px">
+          <div style="font-weight:700;color:var(--green);margin-bottom:10px"><i class="fa-solid fa-check-circle"></i> Limpeza concluída</div>
+          <div style="font-size:.85rem;color:var(--muted);line-height:1.8">
+            <div>✅ <strong style="color:var(--green)">${d.deletados}</strong> títulos deletados</div>
+            ${d.erros > 0 ? `<div>⚠️ <strong style="color:var(--orange)">${d.erros}</strong> erros</div>` : ''}
+          </div>
+          ${d.erros > 0 && d.logErros?.length ? `
+            <details style="margin-top:10px;font-size:.75rem;color:var(--muted)">
+              <summary style="cursor:pointer">Ver erros (${d.erros})</summary>
+              <div style="margin-top:6px">${d.logErros.map(e=>`<div>${e.uuid}: ${e.erro}</div>`).join('')}</div>
+            </details>` : ''}
+        </div>
+      `;
+    }
+    toast(`${d.deletados} títulos deletados com sucesso!`);
+  } catch(e) {
+    if (prog) prog.style.display = 'none';
+    toast('Erro ao deletar: ' + e.message, 'error');
+    if (prev) prev.style.display = 'block';
+  }
+}
+
+// ── Notificações WhatsApp ────────────────────────────────────────────────────
+
+let _notifTemplates = [];
+
+async function carregarNotificacoes() {
+  await Promise.all([carregarNotifStats(), carregarTemplates(), carregarHistorico(1)]);
+  atualizarSelectTemplates();
+  carregarPreviewMassa();
+}
+
+async function carregarNotifStats() {
+  try {
+    const s = await req('GET', `${API}/notif/stats`);
+    document.getElementById('ns-total').textContent    = s.total.toLocaleString('pt-BR');
+    document.getElementById('ns-enviados').textContent = s.enviados.toLocaleString('pt-BR');
+    document.getElementById('ns-erros').textContent    = s.erros.toLocaleString('pt-BR');
+    document.getElementById('ns-hoje').textContent     = s.hoje.toLocaleString('pt-BR');
+    document.getElementById('ns-clientes').textContent = s.clientes.toLocaleString('pt-BR');
+  } catch {}
+}
+
+async function carregarTemplates() {
+  try {
+    _notifTemplates = await req('GET', `${API}/notif/templates`);
+    const lista = document.getElementById('templates-lista');
+    lista.innerHTML = _notifTemplates.map(t => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:14px;background:var(--bg2)" id="tpl-card-${t.chave}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-weight:700;font-size:.9rem">${escHtml(t.titulo)}</span>
+          <span style="background:${t.ativo?'rgba(37,211,102,.15)':'rgba(239,68,68,.12)'};color:${t.ativo?'#25d366':'var(--red)'};padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:600">${t.ativo?'Ativo':'Inativo'}</span>
+          <span style="margin-left:auto;color:var(--muted);font-size:.78rem;font-family:monospace">${t.chave}</span>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label style="font-size:.8rem">Título</label>
+          <input class="form-input" id="tpl-titulo-${t.chave}" value="${escHtml(t.titulo)}" style="font-size:.83rem;padding:7px 10px" />
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label style="font-size:.8rem">Mensagem <small style="color:var(--muted)">{nome} {login} {portal_url}</small></label>
+          <textarea class="form-input" id="tpl-msg-${t.chave}" rows="7" style="font-size:.8rem;font-family:monospace;resize:vertical;line-height:1.5">${escHtml(t.mensagem)}</textarea>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-primary" onclick="salvarTemplate('${t.chave}')" style="font-size:.82rem;padding:8px 16px">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar
+          </button>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.82rem;color:var(--muted)">
+            <input type="checkbox" id="tpl-ativo-${t.chave}" ${t.ativo?'checked':''} onchange="salvarTemplate('${t.chave}')" style="accent-color:var(--lemon)"> Ativo
+          </label>
+          <span id="tpl-save-res-${t.chave}" style="font-size:.8rem;color:var(--green)"></span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('templates-lista').innerHTML = `<div class="empty">Erro ao carregar templates</div>`;
+  }
+}
+
+function atualizarSelectTemplates() {
+  const selManual = document.getElementById('notif-tpl-select');
+  const selMassa  = document.getElementById('massa-tpl-select');
+  const optsManual = `<option value="">— mensagem personalizada —</option>` +
+    _notifTemplates.map(t => `<option value="${t.chave}">${escHtml(t.titulo)}</option>`).join('');
+  const optsMassa = _notifTemplates
+    .filter(t => t.ativo)
+    .map(t => `<option value="${t.chave}">${escHtml(t.titulo)}</option>`).join('');
+  selManual.innerHTML = optsManual;
+  selMassa.innerHTML  = optsMassa;
+}
+
+async function salvarTemplate(chave) {
+  const titulo   = document.getElementById(`tpl-titulo-${chave}`).value;
+  const mensagem = document.getElementById(`tpl-msg-${chave}`).value;
+  const ativo    = document.getElementById(`tpl-ativo-${chave}`).checked;
+  const res = document.getElementById(`tpl-save-res-${chave}`);
+  try {
+    await req('PUT', `${API}/notif/templates/${chave}`, { titulo, mensagem, ativo });
+    res.textContent = '✓ Salvo!';
+    setTimeout(() => { res.textContent = ''; }, 2500);
+    // atualiza cache local
+    const idx = _notifTemplates.findIndex(t => t.chave === chave);
+    if (idx !== -1) { _notifTemplates[idx].titulo = titulo; _notifTemplates[idx].mensagem = mensagem; _notifTemplates[idx].ativo = ativo; }
+    atualizarSelectTemplates();
+    carregarPreviewMassa();
+  } catch {
+    res.style.color = 'var(--red)';
+    res.textContent = '✗ Erro ao salvar';
+  }
+}
+
+function preencherMsgTemplate() {
+  const chave = document.getElementById('notif-tpl-select').value;
+  const area  = document.getElementById('notif-msg');
+  if (!chave) { area.value = ''; return; }
+  const tpl = _notifTemplates.find(t => t.chave === chave);
+  if (tpl) area.value = tpl.mensagem;
+}
+
+async function enviarNotifManual() {
+  const login    = document.getElementById('notif-login').value.trim();
+  const mensagem = document.getElementById('notif-msg').value.trim();
+  const res      = document.getElementById('notif-manual-res');
+  const btn      = document.getElementById('btn-enviar-notif');
+  if (!login || !mensagem) { res.innerHTML = '<span style="color:var(--red)">Preencha login e mensagem.</span>'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+  res.innerHTML = '';
+  try {
+    const d = await req('POST', `${API}/notif/enviar`, { login, mensagem });
+    res.innerHTML = `<span style="color:#25d366"><i class="fa-solid fa-circle-check"></i> Enviado com sucesso para <strong>${login}</strong></span>`;
+    carregarNotifStats();
+    carregarHistorico(1);
+  } catch(e) {
+    res.innerHTML = `<span style="color:var(--red)"><i class="fa-solid fa-circle-xmark"></i> Erro: ${e.message || 'falha no envio'}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp';
+  }
+}
+
+function carregarPreviewMassa() {
+  const chave   = document.getElementById('massa-tpl-select').value;
+  const preview = document.getElementById('massa-preview');
+  const tpl = _notifTemplates.find(t => t.chave === chave);
+  preview.textContent = tpl
+    ? tpl.mensagem.replace(/\{nome\}/g,'[Nome do cliente]').replace(/\{login\}/g,'[login]').replace(/\{portal_url\}/g,'[URL do portal]')
+    : '';
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'massa-tpl-select') carregarPreviewMassa();
+});
+
+async function dispararMassa() {
+  const template = document.getElementById('massa-tpl-select').value;
+  const btn = document.getElementById('btn-massa');
+  const res = document.getElementById('massa-res');
+  if (!template) return;
+  if (!confirm('Confirmar disparo em massa? Apenas clientes sem notificação prévia receberão.')) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Disparando...';
+  res.innerHTML = '';
+  try {
+    const d = await req('POST', `${API}/notif/disparo-massa`, { template });
+    res.innerHTML = `<span style="color:#25d366"><i class="fa-solid fa-circle-check"></i> ${d.mensagem}</span>`;
+    setTimeout(() => { carregarNotifStats(); carregarHistorico(1); }, 3000);
+  } catch(e) {
+    res.innerHTML = `<span style="color:var(--red)">Erro: ${e.message}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Iniciar disparo';
+  }
+}
+
+async function carregarHistorico(pagina = 1) {
+  const login  = document.getElementById('hist-filtro-login')?.value.trim() || '';
+  const status = document.getElementById('hist-filtro-status')?.value || '';
+  const tbody  = document.getElementById('hist-tbody');
+  tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="spinner"></div></div></td></tr>`;
+  try {
+    const params = new URLSearchParams({ pagina, login, status, limite: 50 });
+    const d = await req('GET', `${API}/notif/historico?${params}`);
+    if (!d.rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Nenhum envio registrado</div></td></tr>`;
+    } else {
+      tbody.innerHTML = d.rows.map(r => `
+        <tr>
+          <td style="color:var(--muted);font-size:.8rem">${r.id}</td>
+          <td><strong>${escHtml(r.login)}</strong></td>
+          <td><span class="badge" style="background:rgba(37,211,102,.15);color:#25d366"><i class="fa-brands fa-whatsapp"></i> ${r.canal}</span></td>
+          <td>
+            ${r.status === 'sent'
+              ? '<span class="badge" style="background:rgba(37,211,102,.15);color:#25d366">✓ Enviado</span>'
+              : `<span class="badge badge-red" title="${escHtml(r.erro||'')}">✗ Erro</span>`}
+          </td>
+          <td style="font-size:.8rem;color:var(--muted);white-space:nowrap">${r.created_at}</td>
+          <td style="font-size:.78rem;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.mensagem)}">${escHtml(r.mensagem.substring(0,80))}${r.mensagem.length>80?'…':''}</td>
+        </tr>
+      `).join('');
+    }
+    // Paginação
+    const pg = document.getElementById('hist-paginacao');
+    pg.innerHTML = '';
+    for (let i = 1; i <= d.paginas; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'btn-primary';
+      btn.style.cssText = `padding:5px 12px;font-size:.8rem;${i===pagina?'':'background:var(--bg2);color:var(--text);border:1px solid var(--border)'}`;
+      btn.textContent = i;
+      btn.onclick = () => carregarHistorico(i);
+      pg.appendChild(btn);
+    }
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Erro ao carregar histórico</div></td></tr>`;
+  }
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Watch Brasil Admin ────────────────────────────────────────
+
+function watchTab(tab) {
+  document.querySelectorAll('.watch-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.watch-tab').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById(`watch-panel-${tab}`);
+  const btn = document.getElementById(`wt-${tab}`);
+  if (panel) panel.style.display = '';
+  if (btn) btn.classList.add('active');
+}
+
+function watchAlert(msg, type) {
+  const el = document.getElementById('watch-admin-alert');
+  if (!el) return;
+  el.style.display = '';
+  el.textContent = msg;
+  const colors = {
+    success: { bg: 'rgba(34,197,94,.08)', border: 'rgba(34,197,94,.3)', color: 'var(--green)' },
+    error:   { bg: 'rgba(239,68,68,.08)', border: 'rgba(239,68,68,.3)', color: 'var(--red)' },
+    info:    { bg: 'rgba(96,165,250,.08)', border: 'rgba(96,165,250,.3)', color: 'var(--blue)' },
+  };
+  const c = colors[type] || colors.info;
+  el.style.background = c.bg; el.style.borderColor = c.border; el.style.color = c.color;
+  el.style.border = `1px solid ${c.border}`;
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
+
+function watchResultJson(elId, data) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const pre = document.createElement('pre');
+  pre.style.cssText = 'white-space:pre-wrap;word-break:break-word;font-size:.8rem;background:var(--bg2);padding:14px;border-radius:10px;overflow:auto;max-height:400px;border:1px solid var(--border)';
+  pre.textContent = JSON.stringify(data, null, 2);
+  el.innerHTML = '';
+  el.appendChild(pre);
+}
+
+async function watchBuscar() {
+  const pacote = document.getElementById('wb-buscar-pacote').value.trim();
+  const id = document.getElementById('wb-buscar-id').value.trim();
+  const email = document.getElementById('wb-buscar-email').value.trim();
+  if (!pacote && !id && !email) return watchAlert('Preencha ao menos um campo.', 'error');
+  const el = document.getElementById('wb-buscar-result');
+  el.innerHTML = '<div style="text-align:center;padding:16px"><div class="spinner"></div></div>';
+  try {
+    const d = await req('GET', `/admin/watch/ticket?pPacote=${encodeURIComponent(pacote)}&pAssinanteIDIntegracao=${encodeURIComponent(id)}&pEmailUsuario=${encodeURIComponent(email)}`);
+    const payload = d.data || d;
+    const result = payload.Result || payload.result || payload;
+    const list = Array.isArray(result) ? result : (result && result.list ? result.list : []);
+    if (!list.length) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.85rem"><i class="fa-solid fa-inbox" style="display:block;font-size:1.4rem;margin-bottom:8px"></i>Nenhum assinante encontrado</div>';
+      return;
+    }
+    el.innerHTML = list.map(t => {
+      const ativo = t.Status === true || t.Status === 'true';
+      const badge = ativo ? '<span class="badge badge-green">Ativo</span>' : '<span class="badge badge-red">Inativo</span>';
+      const ticket = t.Ticket || '';
+      const emailU = t.EmailUsuario || t.Email || '';
+      const phone = t.telefone || t.Phone || '';
+      const idInt = t.IDIntegracaoAssinante || '';
+      const data = t.DataCriacao || '';
+      const dataFmt = data ? data.split(' ')[0].split('-').reverse().join('/') : '';
+      const emailSent = t.EmailEnviado === true ? '<span class="badge badge-blue">E-mail enviado</span>' : t.EmailEnviado === false ? '<span class="badge badge-orange">E-mail pendente</span>' : '';
+      return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+          <div style="display:flex;gap:6px;align-items:center">${badge} ${emailSent}</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn-sm lemon" title="Reenviar e-mail" onclick="(async()=>{if(!confirm('Reenviar e-mail?'))return;try{await req('POST','/admin/watch/resend-email',{pTicket:'${ticket}'});toast('E-mail reenviado!');}catch(e){toast(e.message,'error');}})()"><i class="fa-solid fa-paper-plane"></i></button>
+            <button class="btn-sm ${ativo?'red':'lemon'}" title="${ativo?'Inativar':'Ativar'}" onclick="(async()=>{if(!confirm('${ativo?'Inativar':'Ativar'} ticket?'))return;try{await req('POST','/admin/watch/update-status',{pTicket:'${ticket}',pStatus:${!ativo}});toast('Feito!');watchBuscar();}catch(e){toast(e.message,'error');}})()"><i class="fa-solid fa-${ativo?'toggle-off':'toggle-on'}"></i></button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;font-size:.82rem">
+          <div><span style="color:var(--muted)">E-mail:</span> <strong>${escHtml(emailU)}</strong></div>
+          <div><span style="color:var(--muted)">Telefone:</span> <strong>${escHtml(phone)}</strong></div>
+          <div><span style="color:var(--muted)">Ticket:</span> <span style="font-family:ui-monospace,monospace;font-size:.78rem">${escHtml(ticket)}</span></div>
+          <div><span style="color:var(--muted)">ID Integração:</span> <strong>${escHtml(idInt)}</strong></div>
+          <div><span style="color:var(--muted)">Pacote:</span> <strong>${escHtml(String(t.Pacote||''))}</strong></div>
+          <div><span style="color:var(--muted)">Criado em:</span> ${dataFmt}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    watchAlert(e.message, 'error');
+    el.innerHTML = '';
+  }
+}
+
+async function watchInserir() {
+  const email = document.getElementById('wb-ins-email').value.trim();
+  const id = document.getElementById('wb-ins-id').value.trim();
+  const pacote = document.getElementById('wb-ins-pacote').value.trim();
+  const phone = document.getElementById('wb-ins-phone').value.trim();
+  if (!email || !id || !pacote) return watchAlert('E-mail, ID Integração e Pacote são obrigatórios.', 'error');
+  try {
+    const d = await req('POST', '/admin/watch/insert', { pEmail:email, pAssinanteIDIntegracao:id, pPacote:pacote, pPhone:phone });
+    watchAlert('Assinante inserido com sucesso!', 'success');
+    watchResultJson('wb-ins-result', d.data);
+  } catch (e) { watchAlert(e.message, 'error'); }
+}
+
+async function watchCarregarPacotes() {
+  const tbody = document.getElementById('wb-pac-tbody');
+  const statsEl = document.getElementById('wb-pac-stats');
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>';
+  statsEl.innerHTML = '';
+  try {
+    const d = await req('GET', '/admin/watch/pacotes-all');
+    const list = d.data || [];
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty">Nenhum pacote encontrado</div></td></tr>';
+      return;
+    }
+    const totalAtivos = list.reduce((s,p) => s + (p.QuantidadeAtivos || 0), 0);
+    const totalInativos = list.reduce((s,p) => s + (p.QuantidadeInativos || 0), 0);
+    const totalTickets = list.reduce((s,p) => s + (p.TotalTickets || 0), 0);
+    const comClientes = list.filter(p => (p.TotalTickets || 0) > 0).length;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(var(--lemon-rgb),.1)"><i class="fa-solid fa-box-open" style="color:var(--lemon-d)"></i></div><div class="stat-val">${list.length}</div><div class="stat-label">Pacotes</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(34,197,94,.1)"><i class="fa-solid fa-user-check" style="color:var(--green)"></i></div><div class="stat-val">${totalAtivos}</div><div class="stat-label">Ativos</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,.1)"><i class="fa-solid fa-user-xmark" style="color:var(--red)"></i></div><div class="stat-val">${totalInativos}</div><div class="stat-label">Inativos</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(96,165,250,.1)"><i class="fa-solid fa-users" style="color:var(--blue)"></i></div><div class="stat-val">${totalTickets}</div><div class="stat-label">Total Tickets</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(234,88,12,.1)"><i class="fa-solid fa-box" style="color:var(--orange)"></i></div><div class="stat-val">${comClientes}</div><div class="stat-label">Com clientes</div></div>`;
+    tbody.innerHTML = list.map(p => {
+      const nome = (p.Note || '').replace(/^.*\|\s*/, '');
+      const ativo = p.Status === 'ACTIVE';
+      const badge = ativo ? '<span class="badge badge-green">Ativo</span>' : '<span class="badge badge-red">Inativo</span>';
+      const temClientes = (p.TotalTickets || 0) > 0;
+      return `<tr style="${temClientes?'font-weight:600':''}">
+        <td style="font-size:.82rem;font-family:ui-monospace,monospace">${p.Pacote}</td>
+        <td style="font-size:.84rem">${escHtml(nome)}</td>
+        <td style="font-size:.78rem;color:var(--muted)">${escHtml(p.Tipo || '')}</td>
+        <td>${badge}</td>
+        <td style="text-align:center">${p.Screens || '-'}</td>
+        <td style="text-align:center">${p.Price === 0 ? '<span style="color:var(--green);font-weight:600">Grátis</span>' : 'R$ ' + (p.Price||0).toFixed(2)}</td>
+        <td style="text-align:center"><span style="color:var(--green);font-weight:700">${p.QuantidadeAtivos || 0}</span></td>
+        <td style="text-align:center"><span style="color:${(p.QuantidadeInativos||0)>0?'var(--red)':'var(--muted)'}">${p.QuantidadeInativos || 0}</span></td>
+        <td style="text-align:center;font-weight:600">${p.TotalTickets || 0}</td>
+        <td style="text-align:center;color:var(--muted)">${p.QuantidadeDisponivel != null ? p.QuantidadeDisponivel.toLocaleString() : '-'}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    watchAlert(e.message, 'error');
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty" style="color:var(--red)">${escHtml(e.message)}</div></td></tr>`;
+  }
+}
+function watchPacotes() { watchCarregarPacotes(); }
+
+async function watchEditPhone() {
+  const pacote = document.getElementById('wb-edt-ph-pacote').value.trim();
+  const email = document.getElementById('wb-edt-ph-email').value.trim();
+  const phone = document.getElementById('wb-edt-ph-phone').value.trim();
+  if (!pacote || !email || !phone) return watchAlert('Preencha todos os campos.', 'error');
+  try {
+    const d = await req('POST', '/admin/watch/edit-phone', { pPacote:pacote, pEmail:email, pPhone:phone });
+    watchAlert('Telefone atualizado!', 'success');
+    watchResultJson('wb-edt-ph-result', d.data);
+  } catch (e) { watchAlert(e.message, 'error'); }
+}
+
+async function watchEditEmail() {
+  const pacote = document.getElementById('wb-edt-em-pacote').value.trim();
+  const email = document.getElementById('wb-edt-em-email').value.trim();
+  const newEmail = document.getElementById('wb-edt-em-new').value.trim();
+  if (!pacote || !email || !newEmail) return watchAlert('Preencha todos os campos.', 'error');
+  try {
+    const d = await req('POST', '/admin/watch/edit-email', { pPacote:pacote, pEmail:email, pNewEmail:newEmail });
+    watchAlert('E-mail atualizado!', 'success');
+    watchResultJson('wb-edt-em-result', d.data);
+  } catch (e) { watchAlert(e.message, 'error'); }
+}
+
+async function watchResendEmail() {
+  const ticket = document.getElementById('wb-resend-ticket').value.trim();
+  if (!ticket) return watchAlert('Preencha o ticket.', 'error');
+  try {
+    const d = await req('POST', '/admin/watch/resend-email', { pTicket:ticket });
+    watchAlert('E-mail de ativação reenviado!', 'success');
+    watchResultJson('wb-resend-result', d.data);
+  } catch (e) { watchAlert(e.message, 'error'); }
+}
+
+async function watchUpdateStatus(ativar) {
+  const ticket = document.getElementById('wb-st-ticket').value.trim();
+  if (!ticket) return watchAlert('Preencha o ticket.', 'error');
+  const label = ativar ? 'ativar' : 'inativar';
+  if (!confirm(`Deseja ${label} o ticket ${ticket}?`)) return;
+  try {
+    const d = await req('POST', '/admin/watch/update-status', { pTicket:ticket, pStatus:ativar });
+    watchAlert(`Ticket ${ativar ? 'ativado' : 'inativado'} com sucesso!`, 'success');
+    watchResultJson('wb-st-result', d.data);
+  } catch (e) { watchAlert(e.message, 'error'); }
+}
+
+async function watchDeletar() {
+  const ticket = document.getElementById('wb-del-ticket').value.trim();
+  if (!ticket) return watchAlert('Preencha o ticket.', 'error');
+  if (!confirm(`ATENÇÃO: Deseja realmente DELETAR o ticket ${ticket}? Esta ação cancela o plano do assinante.`)) return;
+  try {
+    const d = await req('POST', '/admin/watch/delete', { pTicket:ticket });
+    watchAlert('Ticket deletado!', 'success');
+    watchResultJson('wb-del-result', d.data);
+  } catch (e) { watchAlert(e.message, 'error'); }
+}
+
+// Init
+verificarSessao();
+</script>
+</body>
+</html>

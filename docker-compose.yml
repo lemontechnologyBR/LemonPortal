@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  lemon-portal:
+    build: .
+    container_name: lemon-portal
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - lemon-data:/app/data
+    env_file:
+      - stack.env
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  lemon-data:
+    driver: local

@@ -1,0 +1,9 @@
+node_modules/
+.env
+stack.env
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/vapid.json
+*.log
+.DS_Store

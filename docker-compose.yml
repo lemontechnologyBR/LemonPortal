@@ -2,17 +2,44 @@ version: "3.8"
 
 services:
   lemon-portal:
-    build: .
+    image: ghcr.io/lemontechnologybr/lemonportal:latest
     container_name: lemon-portal
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - lemon-data:/app/data
-    env_file:
-      - stack.env
     environment:
       - NODE_ENV=production
+      - PORT=${PORT:-3000}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - MK_AUTH_URL=${MK_AUTH_URL}
+      - MK_CLIENT_ID=${MK_CLIENT_ID}
+      - MK_CLIENT_SECRET=${MK_CLIENT_SECRET}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASS=${ADMIN_PASS}
+      - MIKROTIK_HOST=${MIKROTIK_HOST}
+      - MIKROTIK_PORT=${MIKROTIK_PORT}
+      - MIKROTIK_USER=${MIKROTIK_USER}
+      - MIKROTIK_PASS=${MIKROTIK_PASS}
+      - MP_PUBLIC_KEY=${MP_PUBLIC_KEY}
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
+      - MP_CLIENT_ID=${MP_CLIENT_ID}
+      - MP_CLIENT_SECRET=${MP_CLIENT_SECRET}
+      - PORTAL_URL=${PORTAL_URL}
+      - EVO_URL=${EVO_URL}
+      - EVO_INSTANCE=${EVO_INSTANCE}
+      - EVO_APIKEY=${EVO_APIKEY}
+      - WATCH_ENABLED=${WATCH_ENABLED}
+      - WATCH_BASE_URI=${WATCH_BASE_URI}
+      - WATCH_AUTH_URI=${WATCH_AUTH_URI}
+      - WATCH_TOKEN_URI=${WATCH_TOKEN_URI}
+      - WATCH_CLIENT_ID=${WATCH_CLIENT_ID}
+      - WATCH_CLIENT_SECRET=${WATCH_CLIENT_SECRET}
+      - WATCH_REDIRECT_URI=${WATCH_REDIRECT_URI}
+      - WATCH_N8N_WEBHOOK_URL=${WATCH_N8N_WEBHOOK_URL}
+      - WATCH_PACOTE_ID=${WATCH_PACOTE_ID}
+      - WATCH_CODE_EXCHANGE_SECRET=${WATCH_CODE_EXCHANGE_SECRET}
 
 volumes:
   lemon-data:

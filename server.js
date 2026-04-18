@@ -261,9 +261,21 @@ function awardPoints(referrerLogin, newClientLogin, newClientNome) {
   const c = db[referrerLogin];
   const already = (c.referrals || []).some(r => r.login === newClientLogin);
   if (already) return false;
-  addPoints(db, referrerLogin, 100, 'indicacao', `Indicação de ${newClientNome}`);
+
+  // Verificar se tem resgate "indicacao_dobro" ativo (2 próximas indicações = 200 pts cada)
+  let pts = 100;
+  const redeemed = c.redeemed || [];
+  const dobroResgate = redeemed.find(r => r.tipo === 'indicacao_dobro' && !r.usado);
+  if (dobroResgate) {
+    pts = 200;
+    if (!dobroResgate.usosRestantes) dobroResgate.usosRestantes = 2;
+    dobroResgate.usosRestantes--;
+    if (dobroResgate.usosRestantes <= 0) dobroResgate.usado = true;
+  }
+
+  addPoints(db, referrerLogin, pts, 'indicacao', `Indicação de ${newClientNome}${pts > 100 ? ' (bônus dobro!)' : ''}`);
   c.referrals = c.referrals || [];
-  c.referrals.push({ login: newClientLogin, nome: newClientNome, data: new Date().toISOString(), pontos: 100 });
+  c.referrals.push({ login: newClientLogin, nome: newClientNome, data: new Date().toISOString(), pontos: pts });
   saveReferrals(db);
   return true;
 }
@@ -313,6 +325,17 @@ function concederPontosMP(login, tituloUuid) {
     if (c.streak >= 18) autoMission('streak_18', 'streak');
     if (c.streak >= 24) autoMission('streak_24', 'streak');
 
+    // Missões de indicação
+    const totalRef = (c.referrals || []).length;
+    if (totalRef >= 1)  autoMission('indicar_1',  'indicacao');
+    if (totalRef >= 2)  autoMission('indicar_2',  'indicacao');
+    if (totalRef >= 3)  autoMission('indicar_3',  'indicacao');
+    if (totalRef >= 5)  autoMission('indicar_5',  'indicacao');
+    if (totalRef >= 7)  autoMission('indicar_7',  'indicacao');
+    if (totalRef >= 10) autoMission('indicar_10', 'indicacao');
+    if (totalRef >= 15) autoMission('indicar_15', 'indicacao');
+    if (totalRef >= 20) autoMission('indicar_20', 'indicacao');
+
     // Missões de conquista
     const totalMissoes  = c.completedMissions.length;
     const totalResgates = (c.redeemed || []).length;
@@ -321,6 +344,12 @@ function concederPontosMP(login, tituloUuid) {
     if (totalMissoes >= 15) autoMission('missoes_15',  'conquista');
     if (totalMissoes >= 20) autoMission('missoes_20',  'conquista');
     if (totalResgates >= 1) autoMission('resgatar_1', 'conquista');
+    if (totalResgates >= 3) autoMission('colecionador', 'conquista');
+
+    // Missões de nível — verificar DEPOIS de todos os bônus acima
+    if (c.totalEarned >= 500)  autoMission('clube_prata',    'conquista');
+    if (c.totalEarned >= 1500) autoMission('clube_ouro',     'conquista');
+    if (c.totalEarned >= 3000) autoMission('clube_diamante', 'conquista');
 
     saveReferrals(db);
     console.log(`[Pontos MP] +25pts para ${login} | streak=${c.streak} | total=${c.points}`);
@@ -855,16 +884,18 @@ app.post('/portal/clube/sincronizar', requireAuth, async (req, res) => {
     let novos = 0;
 
     for (const f of faturas) {
-      const id = String(f.id || f.numero || f.referencia || '');
-      if (!id || c.awardedInvoices.includes(id)) continue;
+      const ids = [f.id, f.numero, f.referencia, f.uuid].map(v => String(v || '').trim()).filter(Boolean);
+      if (ids.length === 0) continue;
+      if (ids.some(id => c.awardedInvoices.includes(id))) continue;
 
       const venc = new Date(f.data_vencimento || f.vencimento || '');
       const pago = new Date(f.data_pagamento  || f.pagamento  || '');
       const emDia = !isNaN(venc) && !isNaN(pago) && pago <= venc;
 
       if (emDia) {
-        addPoints(db, login, 25, 'pagamento', `Fatura ${id} paga em dia`);
-        c.awardedInvoices.push(id);
+        const mainId = ids[0];
+        addPoints(db, login, 25, 'pagamento', `Fatura ${mainId} paga em dia`);
+        ids.forEach(id => { if (!c.awardedInvoices.includes(id)) c.awardedInvoices.push(id); });
         novos++;
       }
     }
@@ -1137,6 +1168,53 @@ app.post('/portal/clube/missao', requireAuth, async (req, res) => {
     }
   }
 
+  // Primeiro login — valida que tem pelo menos 1 login registrado
+  if (tipo === 'primeiro_login') {
+    if ((c.loginHistory || []).length < 1) {
+      return res.status(400).json({ error: 'Nenhum login registrado.' });
+    }
+  }
+
+  // Abrir chamado — valida no MK-Auth que existe pelo menos 1 chamado
+  if (tipo === 'abrir_chamado') {
+    try {
+      const token = await getJWT();
+      const r = await axios.get(`${MK_URL}/chamado/listar/pagina=1/cliente=${login}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const chamados = Array.isArray(r.data) ? r.data : (r.data?.registros || []);
+      if (chamados.length === 0) {
+        return res.status(400).json({ error: 'Abra um chamado de suporte primeiro.' });
+      }
+    } catch {
+      return res.status(500).json({ error: 'Não foi possível verificar seus chamados.' });
+    }
+  }
+
+  // Mudar dados — valida que os dados de contato existem no MK
+  if (tipo === 'mudar_dados') {
+    try {
+      const token = await getJWT();
+      const r = await axios.get(`${MK_URL}/cliente/show/${login}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = r.data;
+      if (!d.email && !d.fone && !d.celular) {
+        return res.status(400).json({ error: 'Atualize seus dados de contato no perfil primeiro.' });
+      }
+    } catch {
+      return res.status(500).json({ error: 'Não foi possível verificar seus dados.' });
+    }
+  }
+
+  // Ativar notificações — valida que tem push subscription registrada
+  if (tipo === 'ativar_notif') {
+    const sub = sqliteDb.prepare('SELECT 1 FROM push_subscriptions WHERE login = ?').get(login);
+    if (!sub) {
+      return res.status(400).json({ error: 'Ative as notificações push primeiro.' });
+    }
+  }
+
   // Perfil completo — valida dados reais via API MK-Auth
   if (tipo === 'perfil_completo') {
     try {
@@ -1272,7 +1350,9 @@ app.post('/portal/clube/resgatar', requireAuth, async (req, res) => {
 
     c.points -= opcao.pontos;
     c.redeemed = c.redeemed || [];
-    c.redeemed.unshift({ data: new Date().toISOString(), tipo, label: opcao.label, pontos: opcao.pontos });
+    const redeemEntry = { data: new Date().toISOString(), tipo, label: opcao.label, pontos: opcao.pontos };
+    if (tipo === 'indicacao_dobro') { redeemEntry.usosRestantes = 2; redeemEntry.usado = false; }
+    c.redeemed.unshift(redeemEntry);
     c.log = c.log || [];
     c.log.unshift({ data: new Date().toISOString(), pontos: -opcao.pontos, tipo: 'resgate', descricao: opcao.label });
     c.log = c.log.slice(0, 100);
@@ -1645,14 +1725,14 @@ app.get('/admin/stats', requireAdmin, async (req, res) => {
     let totalResgates = 0;
     for (const r of redRows) { try { totalResgates += JSON.parse(r.redeemed).length; } catch {} }
 
-    // Distribuição de níveis
-    const nivelRows = sqliteDb.prepare('SELECT points FROM clients').all();
+    // Distribuição de níveis (usa total_earned, não saldo atual)
+    const nivelRows = sqliteDb.prepare('SELECT total_earned FROM clients').all();
     const niveis = { Bronze: 0, Prata: 0, Ouro: 0, Diamante: 0 };
     for (const r of nivelRows) {
-      const p = r.points || 0;
-      if (p >= 3000) niveis.Diamante++;
-      else if (p >= 1500) niveis.Ouro++;
-      else if (p >= 500) niveis.Prata++;
+      const te = r.total_earned || 0;
+      if (te >= 3000) niveis.Diamante++;
+      else if (te >= 1500) niveis.Ouro++;
+      else if (te >= 500) niveis.Prata++;
       else niveis.Bronze++;
     }
 
@@ -2503,7 +2583,7 @@ async function notificarFaturaPagaComPontos(login, valor, resultado = {}) {
     const streak   = db[login]?.streak || resultado.streak   || 0;
 
     // Adiciona linha de pontos à mensagem
-    const extra = `\n🌟 Você ganhou *+25 pontos* no Lemon Club!\n💎 Total acumulado: *${totalPts} pontos* | Meses em dia: *${streak}*`;
+    const extra = `\n🌟 Você ganhou *+25 pontos* no Lemon Club!\n💎 Total acumulado: *${totalPts} pontos* | Faturas em dia: *${streak}*`;
     const msg = renderTemplate(tpl.mensagem, { nome, login, valor: valorFmt, data, portal_url: PORTAL_URL }) + extra;
     await enviarZapCliente(login, msg);
   } catch (e) {

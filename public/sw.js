@@ -49,8 +49,22 @@ self.addEventListener('fetch', e => {
   );
 });
 
+/** Garante que a URL do payload pertence ao mesmo origin do SW (evita open-redirect). */
+function safeNotifUrl(raw) {
+  const base = self.location?.origin || self.registration.scope.replace(/\/$/, '');
+  try {
+    const candidate = /^https?:\/\//i.test(raw)
+      ? raw
+      : new URL(raw.startsWith('/') ? raw : `/${raw}`, base).href;
+    // Rejeita qualquer URL de origin diferente
+    return candidate.startsWith(base + '/') || candidate === base ? candidate : base + '/';
+  } catch (_) {
+    return base + '/';
+  }
+}
+
 self.addEventListener('push', (event) => {
-  let data = { title: 'Lemon', body: '', url: '/' };
+  let data = { title: 'Lemon', body: '', url: '/', kind: 'aviso' };
   try {
     const j = event.data ? event.data.json() : null;
     if (j && typeof j === 'object') data = { ...data, ...j };
@@ -60,27 +74,29 @@ self.addEventListener('push', (event) => {
       if (t) data.body = t.slice(0, 500);
     } catch (_) {}
   }
+  // Tag por tipo: agrupa notificações da mesma categoria (substitui a anterior)
+  const tag = 'lemon-' + String(data.kind || 'aviso').replace(/[^a-z0-9_-]/gi, '');
   event.waitUntil(
     self.registration.showNotification(String(data.title || 'Lemon').slice(0, 120), {
       body: String(data.body || '').slice(0, 500),
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      data: { url: typeof data.url === 'string' ? data.url : '/' },
-      tag: 'lemon-' + Date.now(),
+      data: { url: safeNotifUrl(typeof data.url === 'string' ? data.url : '/') },
+      tag,
+      renotify: true,
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const raw = event.notification?.data?.url || '/';
-  const base = self.location?.origin || self.registration.scope.replace(/\/$/, '');
-  const url = /^https?:\/\//i.test(raw) ? raw : new URL(raw.startsWith('/') ? raw : `/${raw}`, base).href;
+  const url = safeNotifUrl(event.notification?.data?.url || '/');
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      const c = list[0];
-      if (c && typeof c.navigate === 'function') {
-        return c.navigate(url).then(() => c.focus()).catch(() => self.clients.openWindow(url));
+      // Prefere a janela já focada ou qualquer janela com a URL alvo aberta
+      const target = list.find(c => c.url === url) || list.find(c => c.focused) || list[0];
+      if (target && typeof target.navigate === 'function') {
+        return target.navigate(url).then(() => target.focus()).catch(() => self.clients.openWindow(url));
       }
       return self.clients.openWindow(url);
     })

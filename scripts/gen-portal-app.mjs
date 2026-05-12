@@ -24,7 +24,10 @@ for (let i = 0; i < lines.length; i++) {
 
 let body = kept.join('\n');
 
-body = body.replace(/const API = '\/portal';\s*\nlet clienteData = null;\s*\n\n\/\/ ===== UTILS =====\s*\n\nasync function request[\s\S]*?^\/\/ ===== NAVEGAÇÃO =====/m, '// ===== NAVEGAÇÃO =====');
+/** app.js ainda traz API/util/request antes da navegação — o hdr já importa request e constants. */
+body = body.replace(/const API = '\/portal';[\s\S]*?^\/\/ ===== NAVEGAÇÃO =====/m, '// ===== NAVEGAÇÃO =====');
+body = body.replace(/\blet clienteData = null;\s*\n/g, '');
+body = body.replace(/\bclienteData\b/g, 'S.clienteData');
 
 body = body.replace(
   /if \(view !== 'conexao' && _connInterval\) \{\s*\n\s*clearInterval\(_connInterval\);\s*\n\s*_connInterval = null;\s*\n\s*\}/,
@@ -35,16 +38,15 @@ body = body.replace(
 );
 
 body = body.replace(/\b_connInterval\b/g, 'S.connInterval');
-body = body.replace(/\bclienteData\b/g, 'S.clienteData');
 body = body.replace(/let faturasCarregadas = \{ abertas: false, vencidas: false, pagas: false \};/, '');
 body = body.replace(/\bfaturasCarregadas\./g, 'S.faturasCarregadas.');
 body = body.replace(/_mpLogoImg/g, 'MP_LOGO_IMG');
 
 const hdr = `/**
- * Portal do cliente — núcleo (navegação, dashboard, faturas, chamados, perfil).
- * MP, velocidade e Lemon Club: modules/.
+ * Portal do cliente — núcleo (navegação, login/logout, sidebar).
+ * Dashboard, faturas, chamados, perfil, Watch TV, MP, velocidade e Lemon Club: modules/.
  */
-import { API, MP_LOGO_IMG, VIEW_TITLES } from './modules/constants.js';
+import { API, MP_LOGO_IMG, VIEW_TITLES, FEATURE_WATCH_TV } from './modules/constants.js';
 import { S, app } from './modules/state.js';
 import { request } from './modules/http.js';
 import { initOnboardingFormListeners, onboardingWindowAPI } from './modules/onboarding.js';
@@ -66,16 +68,28 @@ import * as mp from './modules/mercadopago.js';
 import * as conn from './modules/connection-speed.js';
 import * as club from './modules/club.js';
 import * as notif from './modules/notificacoes.js';
+import * as dash from './modules/dashboard.js';
+import * as watch from './modules/watch.js';
+import * as fat from './modules/faturas.js';
+import * as cham from './modules/chamados.js';
+import * as perf from './modules/perfil.js';
+
+/** Landing / captação usam onclick no HTML — disponível antes do resto do boot. */
+Object.assign(window, onboardingWindowAPI);
 
 const loadNotificacoes = notif.loadNotificacoes;
 
-/** MP, conexão, Lemon Club — globais para onclick / HTML */
+/** MP, conexão, Lemon Club, Dashboard, Faturas, etc. — globais para onclick / HTML */
 Object.assign(window, {
   gerarPixMP: mp.gerarPixMP,
+  pagarPixFaturaComValorAtualizado: mp.pagarPixFaturaComValorAtualizado,
+  abrirCartaoFaturaComValorAtualizado: mp.abrirCartaoFaturaComValorAtualizado,
+  fecharFormPagamentoCartaoFatura: mp.fecharFormPagamentoCartaoFatura,
+  abrirFormPagamentoCartaoFatura: mp.abrirFormPagamentoCartaoFatura,
+  confirmarPagamentoCartaoFatura: mp.confirmarPagamentoCartaoFatura,
   fecharFormAssinaturaMP: mp.fecharFormAssinaturaMP,
   abrirFormAssinaturaMP: mp.abrirFormAssinaturaMP,
   confirmarAssinaturaComToken: mp.confirmarAssinaturaComToken,
-  assinaturaMercadoPagoHosted: mp.assinaturaMercadoPagoHosted,
   preencherCarteiraMpAviso: mp.preencherCarteiraMpAviso,
   _mpCriarCardToken: mp._mpCriarCardToken,
   loadConexao: conn.loadConexao,
@@ -84,6 +98,7 @@ Object.assign(window, {
   limparHistoricoSpeed: conn.limparHistoricoSpeed,
   navToVelocidade: conn.navToVelocidade,
   missaoVisita: club.missaoVisita,
+  setClubSegment: club.setClubSegment,
   loadIndicacoes: club.loadIndicacoes,
   completarMissao: club.completarMissao,
   _prePopularCacheMissoes: club._prePopularCacheMissoes,
@@ -101,9 +116,20 @@ Object.assign(window, {
   setPushNotifPref: notif.setPushNotifPref,
   ativarPushNesteDispositivo: notif.ativarPushNesteDispositivo,
   desativarPushNesteDispositivo: notif.desativarPushNesteDispositivo,
+  loadDashboard: dash.loadDashboard,
+  watchAtivarFree: watch.watchAtivarFree,
+  loadWatchBrasil: watch.loadWatchBrasil,
+  loadFaturas: fat.loadFaturas,
+  switchTab: fat.switchTab,
+  abrirFatura: fat.abrirFatura,
+  loadChamados: cham.loadChamados,
+  abrirChamado: cham.abrirChamado,
+  loadPerfil: perf.loadPerfil,
+  toggleCarteiraAddForm: perf.toggleCarteiraAddForm,
+  confirmarCarteiraAdd: perf.confirmarCarteiraAdd,
+  removerCartaoCarteira: perf.removerCartaoCarteira,
 });
 
-conn.wireSpeedtestMissions((tipo, btn, sil) => club.completarMissao(tipo, btn, sil));
 club.initClubPwa();
 
 `;
@@ -111,14 +137,18 @@ club.initClubPwa();
 const footer = `
 
 initOnboardingFormListeners();
+cham.initChamados();
+perf.initPerfil();
 
 app.navTo = navTo;
-app.refreshFaturas = loadFaturas;
+app.refreshFaturas = fat.forceReloadFaturas;
+app.abrirFatura = fat.abrirFatura;
 
 /** Handlers globais para onclick="" no index.html */
 const portalGlobalHandlers = {
   ...onboardingWindowAPI,
   navTo,
+  setClubSegment: club.setClubSegment,
   loadNotificacoes: notif.loadNotificacoes,
   setPushNotifPref: notif.setPushNotifPref,
   ativarPushNesteDispositivo: notif.ativarPushNesteDispositivo,
@@ -128,17 +158,17 @@ const portalGlobalHandlers = {
   closeSidebarMobile,
   togglePass,
   logout,
-  switchTab,
-  abrirFatura,
-  loadChamados,
-  abrirChamado,
-  toggleCarteiraAddForm,
-  confirmarCarteiraAdd,
-  removerCartaoCarteira,
+  switchTab: fat.switchTab,
+  abrirFatura: fat.abrirFatura,
+  loadChamados: cham.loadChamados,
+  abrirChamado: cham.abrirChamado,
+  toggleCarteiraAddForm: perf.toggleCarteiraAddForm,
+  confirmarCarteiraAdd: perf.confirmarCarteiraAdd,
+  removerCartaoCarteira: perf.removerCartaoCarteira,
   closeModal,
   closeModalDirect,
   copiar,
-  watchAtivarFree,
+  watchAtivarFree: watch.watchAtivarFree,
 };
 Object.assign(window, portalGlobalHandlers);
 
@@ -146,16 +176,22 @@ Object.assign(window, portalGlobalHandlers);
   try {
     const sess = await request('GET', \`\${API}/session\`);
     if (sess.logado) {
+      if (typeof window.__lemonSplashShow === 'function') window.__lemonSplashShow();
       document.getElementById('topbar-nome').textContent = sess.nome || '';
       document.getElementById('page-landing').classList.remove('active');
       document.getElementById('page-landing').classList.add('hidden');
       document.getElementById('page-portal').classList.remove('hidden');
-      navTo('dashboard');
+      await navTo('dashboard');
       const open = new URLSearchParams(window.location.search).get('open');
       if (open === 'faturas') navTo('faturas');
       else if (open === 'notificacoes') navTo('notificacoes');
+      if (typeof window.__lemonSplashHide === 'function') window.__lemonSplashHide();
+    } else {
+      if (typeof window.__lemonSplashScheduleGuestHide === 'function') window.__lemonSplashScheduleGuestHide();
     }
-  } catch (_) {}
+  } catch (_) {
+    if (typeof window.__lemonSplashScheduleGuestHide === 'function') window.__lemonSplashScheduleGuestHide();
+  }
 })();
 `;
 

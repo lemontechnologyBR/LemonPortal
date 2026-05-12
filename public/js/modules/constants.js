@@ -1,6 +1,9 @@
 /** API base e constantes do portal (cliente). */
 export const API = '/portal';
 
+/** Watch TV — `false`: esconde a secção no portal até voltar a ativar aqui ou no servidor. */
+export const FEATURE_WATCH_TV = false;
+
 /** Nome exibido nos cards de plano (index.html) → valor enviado no cadastro (MK). */
 export const PLANO_NOME_PARA_VALOR_MK = {
   'Lemon Smart': 'Lemon_Smart',

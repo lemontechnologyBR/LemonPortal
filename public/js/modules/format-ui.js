@@ -188,3 +188,24 @@ export function _abrirModalCopia(texto) {
 }
 
 export { _copiarTexto };
+
+export function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function _dashLocalMidnight(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export function daysUntilVenc(datavencStr) {
+  if (!datavencStr) return null;
+  const due = new Date(datavencStr);
+  if (isNaN(due.getTime())) return null;
+  const dueDay = _dashLocalMidnight(due);
+  const today = _dashLocalMidnight(new Date());
+  return Math.round((dueDay - today) / 86400000);
+}

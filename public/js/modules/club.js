@@ -4,12 +4,232 @@
 import { API, LEVEL_COLORS } from './constants.js';
 import { S, app, cacheMissao, missaoCacheHas } from './state.js';
 import { request } from './http.js';
-import { emptyState, showToast, hexToRgba, animarContador } from './format-ui.js';
+import { emptyState, showToast, hexToRgba, animarContador, fmtMoeda, escHtml } from './format-ui.js';
 
 let _refLink = '';
 let _pwaPrompt = null;
 
+const CLUB_SEGMENTS = new Set(['resumo', 'desafios', 'resgates', 'indicar', 'historico', 'cupons']);
+let _clubSegNavBound = false;
+
 const LEMON_CLUBE_DESCONTO_FATURA_PENDENTE = 'LEMON_CLUBE_DESCONTO_FATURA_PENDENTE';
+
+export function setClubSegment(seg) {
+  if (!CLUB_SEGMENTS.has(seg)) return;
+  document.querySelectorAll('.club-seg-btn').forEach(btn => {
+    const on = btn.dataset.clubSeg === seg;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('.club-seg-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.clubPanel === seg);
+  });
+}
+
+let _lastClubStats = null;
+
+function initClubSegmentNav() {
+  if (_clubSegNavBound) return;
+  const nav = document.querySelector('.club-seg-nav');
+  if (!nav) return;
+  nav.addEventListener('click', e => {
+    const btn = e.target.closest('.club-seg-btn');
+    if (!btn || !nav.contains(btn)) return;
+    const s = btn.dataset.clubSeg;
+    if (!s) return;
+    setClubSegment(s);
+    if (s === 'cupons') {
+      if (_lastClubStats) {
+        _renderCuponsPanel(_lastClubStats);
+      } else {
+        // Dados ainda não chegaram — busca diretamente
+        request('GET', `${API}/clube/stats`).then(d => {
+          _lastClubStats = d;
+          _renderCuponsPanel(d);
+        }).catch(() => _renderCuponsPanel({ faturaDescontoPendente: null, faturaDescontoAplicados: [] }));
+      }
+    }
+  });
+  _clubSegNavBound = true;
+}
+
+function _fmtDataCurta(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+  catch { return '—'; }
+}
+
+function _renderCuponsPanel(stats) {
+  const el = document.getElementById('club-cupons-body');
+  if (!el) return;
+
+  // Se os stats ainda não chegaram, tenta buscar
+  if (!stats) {
+    el.innerHTML = `<div class="cupom-empty"><i class="fa-solid fa-spinner fa-spin"></i><p>Carregando cupons…</p></div>`;
+    return;
+  }
+
+  const pendente  = stats.faturaDescontoPendente  || null;
+  const aplicados = stats.faturaDescontoAplicados || []; // desconto c/ valor de pagamento
+  const resgates  = (stats.resgates || []).slice(0, 30); // todos os resgates
+
+  if (!pendente && !resgates.length) {
+    el.innerHTML = `
+      <div class="cupom-empty">
+        <div class="cupom-empty__icon"><i class="fa-solid fa-ticket"></i></div>
+        <p class="cupom-empty__title">Nenhum resgate ainda</p>
+        <p class="cupom-empty__sub">Troque seus pontos na aba <strong>Trocar</strong><br>e seus resgates aparecem aqui.</p>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+
+  // ── Cupom ativo (estilo voucher) ──────────────────────────────────────────
+  if (pendente) {
+    // 4 estados possíveis:
+    //   pendente  → tem alvo, não venceu, ainda não clicou Aplicar → verde  + botão Aplicar
+    //   aplicado  → clicou Aplicar, aguardando pagamento           → azul/verde escuro, info
+    //   vencida   → tem alvo mas a data já passou                  → laranja + aviso fatura vencida
+    //   bloqueado → sem alvo (sem fatura aberta / em atraso)       → laranja + aviso regularize
+    const temAlvo       = !!(pendente.titulo_uuid_alvo);
+    const faturaVencida = !!(pendente.faturaAlvoVencida);
+    const jaAplicado    = !!(pendente.aplicado);
+    const estado = jaAplicado            ? 'aplicado'
+                 : temAlvo && !faturaVencida ? 'pendente'
+                 : temAlvo && faturaVencida  ? 'vencida'
+                 :                            'bloqueado';
+
+    const dvFmt    = _fmtDataCurta(pendente.titulo_alvo_datavenc);
+    const ref      = pendente.titulo_alvo_referencia ? escHtml(pendente.titulo_alvo_referencia) : '';
+    const desde    = pendente.desde ? `Resgatado em ${_fmtDataCurta(pendente.desde)}` : '';
+    const uuidAlvo = pendente.titulo_uuid_alvo || '';
+
+    const isPendente = estado === 'pendente';
+    const isAplicado = estado === 'aplicado';
+    const isVencida  = estado === 'vencida';
+    const cssCard    = (isPendente || isAplicado) ? 'cupom-voucher--ativo' : 'cupom-voucher--bloqueado';
+    const cssStamp   = (isPendente || isAplicado) ? '' : ' cupom-voucher__stamp--locked';
+    const cssNotch   = (isPendente || isAplicado) ? '' : ' cupom-voucher__notch--locked';
+    const cssStatus  = (isPendente || isAplicado) ? '' : ' cupom-voucher__status--locked';
+    const statusIcon = isPendente
+      ? '<i class="fa-solid fa-circle-check"></i> Ativo'
+      : isAplicado
+        ? '<i class="fa-solid fa-check-double"></i> Aplicado na fatura'
+        : isVencida
+          ? '<i class="fa-solid fa-calendar-xmark"></i> Fatura vencida'
+          : '<i class="fa-solid fa-lock"></i> Bloqueado';
+
+    let acaoHtml = '';
+    if (isPendente) {
+      acaoHtml = `<button type="button" class="cupom-voucher__btn" data-aplicar-uuid="${escHtml(uuidAlvo)}">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Aplicar na fatura
+                  </button>`;
+    } else if (isAplicado) {
+      acaoHtml = `<button type="button" class="cupom-voucher__btn cupom-voucher__btn--ver" data-aplicar-uuid="${escHtml(uuidAlvo)}">
+                    <i class="fa-solid fa-eye"></i> Ver fatura com desconto
+                  </button>`;
+    } else if (isVencida) {
+      acaoHtml = `<div class="cupom-voucher__bloqueado-msg cupom-voucher__bloqueado-msg--vencida">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Cupom não aplicado: a fatura alvo venceu. Uma nova fatura em aberto será vinculada automaticamente.
+                  </div>`;
+    } else {
+      acaoHtml = `<div class="cupom-voucher__bloqueado-msg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Você possui faturas em atraso. Regularize os pagamentos para ativar este cupom.
+                  </div>`;
+    }
+
+    html += `
+      <div class="cupom-voucher ${cssCard}">
+        <div class="cupom-voucher__stamp${cssStamp}">
+          <span class="cupom-voucher__pct">${pendente.percent}%</span>
+          <span class="cupom-voucher__off">OFF</span>
+        </div>
+        <div class="cupom-voucher__notch${cssNotch}"></div>
+        <div class="cupom-voucher__body">
+          <div class="cupom-voucher__status${cssStatus}">${statusIcon}</div>
+          <div class="cupom-voucher__label">${escHtml(pendente.label || `Desconto ${pendente.percent}% na fatura`)}</div>
+          ${dvFmt && dvFmt !== '—'
+            ? `<div class="cupom-voucher__meta"><i class="fa-solid fa-calendar-day"></i> Fatura com vencimento <strong>${dvFmt}</strong>${ref ? ` · ${ref}` : ''}</div>`
+            : ''}
+          ${desde ? `<div class="cupom-voucher__desde"><i class="fa-regular fa-clock"></i> ${desde}</div>` : ''}
+          ${acaoHtml}
+        </div>
+      </div>`;
+  }
+
+  // ── Histórico — todos os resgates ────────────────────────────────────────
+  if (resgates.length) {
+    html += `<div class="cupom-sec-title"><i class="fa-solid fa-clock-rotate-left"></i> Histórico de resgates</div>`;
+    const _TIPO_DESCONTO = /^desconto/;
+    resgates.forEach((r) => {
+      const isDesc = _TIPO_DESCONTO.test(r.tipo || '');
+      const pct    = isDesc ? (r.tipo === 'desconto' ? 10 : parseInt(r.tipo.replace('desconto_', ''), 10) || null) : null;
+      // busca info de pagamento no registro de aplicados (mesmo label, data próxima ≤ 3 dias)
+      const aplicado = isDesc
+        ? aplicados.find((a) => a.label === r.label && Math.abs(new Date(a.data) - new Date(r.data)) < 86400000 * 3)
+        : null;
+      const data = _fmtDataCurta(r.data);
+      const desc = aplicado?.valor_desconto != null ? `− ${fmtMoeda(aplicado.valor_desconto)}` : '';
+      const pago = aplicado?.valor_pago     != null ? `Pago: ${fmtMoeda(aplicado.valor_pago)}` : '';
+      const ptsBadge = r.pontos ? `<span class="cupom-hist-pts">−${r.pontos} pts</span>` : '';
+
+      html += `
+        <div class="cupom-voucher cupom-voucher--usado">
+          <div class="cupom-voucher__stamp cupom-voucher__stamp--used">
+            ${isDesc && pct
+              ? `<span class="cupom-voucher__pct">${pct}%</span><span class="cupom-voucher__off">OFF</span>`
+              : `<span class="cupom-voucher__icon-stamp"><i class="fa-solid fa-gift"></i></span>`}
+          </div>
+          <div class="cupom-voucher__notch cupom-voucher__notch--used"></div>
+          <div class="cupom-voucher__body">
+            <div class="cupom-voucher__status cupom-voucher__status--used"><i class="fa-solid fa-check"></i> Resgatado</div>
+            <div class="cupom-voucher__label">${escHtml(r.label || r.tipo)}</div>
+            <div class="cupom-voucher__footer">
+              ${pago ? `<span class="cupom-voucher__pago">${pago}</span>` : ''}
+              ${desc ? `<span class="cupom-voucher__economy">${desc}</span>` : ''}
+              ${ptsBadge}
+              <span class="cupom-voucher__data">${data}</span>
+            </div>
+          </div>
+        </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+
+  // Botões do cupom ativo — "Aplicar" ou "Ver fatura com desconto"
+  const btnAplicar = el.querySelector('[data-aplicar-uuid]');
+  if (btnAplicar) {
+    const isVerBtn = btnAplicar.classList.contains('cupom-voucher__btn--ver');
+    btnAplicar.addEventListener('click', async () => {
+      const uuid = btnAplicar.dataset.aplicarUuid;
+      if (isVerBtn) {
+        // Cupom já aplicado — apenas navega e abre a fatura
+        if (typeof app.navTo === 'function') app.navTo('faturas');
+        setTimeout(() => { if (typeof app.abrirFatura === 'function') app.abrirFatura(uuid); }, 420);
+        return;
+      }
+      // Aplicar pela primeira vez
+      btnAplicar.disabled = true;
+      btnAplicar.innerHTML = '<div class="spinner" style="width:14px;height:14px;margin:0 auto"></div>';
+      try {
+        await request('POST', `${API}/clube/cupom/aplicar`);
+        showToast('Cupom aplicado! O desconto já aparece na fatura.', 'success');
+        loadIndicacoes();
+        if (typeof app.navTo === 'function') app.navTo('faturas');
+        if (typeof app.refreshFaturas === 'function') app.refreshFaturas();
+        setTimeout(() => { if (typeof app.abrirFatura === 'function') app.abrirFatura(uuid); }, 500);
+      } catch (e) {
+        btnAplicar.disabled = false;
+        btnAplicar.innerHTML = '<i class="fa-solid fa-file-invoice-dollar"></i> Aplicar na fatura';
+        showToast(e?.data?.error || 'Não foi possível aplicar o cupom.', 'error');
+      }
+    });
+  }
+}
 
 /** API antiga sem `code` ou cache SW desatualizado — ainda abrimos o modal. */
 function erroEhDescontoFaturaPendente(e) {
@@ -71,13 +291,17 @@ export async function missaoVisita(tipo) {
   } catch {}
 }
 
-export async function loadIndicacoes() {
+export async function loadIndicacoes(opts = {}) {
+  initClubSegmentNav();
+  if (opts.resetSegment) setClubSegment('resumo');
+
   try {
     await request('POST', `${API}/clube/sincronizar`);
   } catch {}
 
   try {
     const data = await request('GET', `${API}/clube/stats`);
+    _lastClubStats = data;
     S.clubPontos = data.pontos;
     _refLink = data.link;
 
@@ -125,6 +349,7 @@ export async function loadIndicacoes() {
     missaoVisita('ver_desafios');
     renderClubLog(data.log || []);
     missaoVisita('ver_historico');
+    _renderCuponsPanel(data);
   } catch (e) {
     console.error(e);
   }
@@ -133,11 +358,11 @@ export async function loadIndicacoes() {
 function atualizarBotoesResgate(pontos) {
   const resgates = [
     { id: 'reward-desconto', pts: 100 },
-    { id: 'reward-desconto_20', pts: 180 },
-    { id: 'reward-desconto_30', pts: 260 },
-    { id: 'reward-desconto_40', pts: 340 },
-    { id: 'reward-desconto_50', pts: 420 },
-    { id: 'reward-desconto_80', pts: 650 },
+    { id: 'reward-desconto_20', pts: 200 },
+    { id: 'reward-desconto_30', pts: 300 },
+    { id: 'reward-desconto_40', pts: 400 },
+    { id: 'reward-desconto_50', pts: 500 },
+    { id: 'reward-desconto_80', pts: 800 },
     { id: 'reward-velocidade_dobro_7d', pts: 220 },
     { id: 'reward-upgrade', pts: 300 },
     { id: 'reward-plano_up_7d', pts: 370 },
@@ -149,7 +374,7 @@ function atualizarBotoesResgate(pontos) {
     { id: 'reward-mes_gratis', pts: 800 },
     { id: 'reward-upgrade_90d', pts: 850 },
     { id: 'reward-plano_up_30d', pts: 950 },
-    { id: 'reward-desconto_100', pts: 1050 },
+    { id: 'reward-desconto_100', pts: 1000 },
     { id: 'reward-plano_up_60d', pts: 1300 },
     { id: 'reward-dois_meses', pts: 1500 },
     { id: 'reward-tres_meses', pts: 1800 },
@@ -503,6 +728,7 @@ export function compartilharNativo() {
 }
 
 export async function resgatarBeneficio(tipo, btn) {
+  setClubSegment('resgates');
   const msg = document.getElementById('club-reward-msg');
   if (msg) msg.innerHTML = '';
   btn.disabled = true;
@@ -519,7 +745,35 @@ export async function resgatarBeneficio(tipo, btn) {
         badge.style.display = '';
       } else badge.style.display = 'none';
     }
-    if (msg) {
+    if (r.faturaDesconto) {
+      // Navega imediatamente para a aba Cupons e já mostra o cupom ativo
+      setClubSegment('cupons');
+      const _fdUuid = r.faturaDesconto.titulo_uuid_alvo || null;
+      const _fdDv   = r.faturaDesconto.titulo_alvo_datavenc || null;
+      // Calcula se a fatura alvo já venceu (improvável no resgate, mas garante consistência)
+      let _fdVencida = false;
+      if (_fdUuid && _fdDv) {
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        const dv   = new Date(_fdDv); dv.setHours(0, 0, 0, 0);
+        _fdVencida = dv < hoje;
+      }
+      _renderCuponsPanel({
+        faturaDescontoPendente: {
+          percent:                   r.faturaDesconto.percent,
+          label:                     r.faturaDesconto.label || `Desconto ${r.faturaDesconto.percent}% na fatura`,
+          titulo_uuid_alvo:          _fdUuid,
+          titulo_alvo_datavenc:      _fdDv,
+          titulo_alvo_referencia:    r.faturaDesconto.titulo_alvo_referencia || null,
+          desde:                     new Date().toISOString(),
+          aplicavel:                 !!(  _fdUuid && !_fdVencida),
+          faturaAlvoVencida:         _fdVencida,
+        },
+        faturaDescontoAplicados: _lastClubStats?.faturaDescontoAplicados || [],
+      });
+      showToast(`Cupom de ${r.faturaDesconto.percent}% ativado! Abra a fatura para pagar com desconto.`, 'success');
+      // Força reload das faturas em segundo plano para já enriquecer com o cupom
+      if (typeof app.refreshFaturas === 'function') app.refreshFaturas();
+    } else if (msg) {
       msg.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <strong>${r.label}</strong> solicitado! Nossa equipe aplicará em breve. Pontos restantes: <strong>${r.pontosRestantes}</strong></div>`;
       msg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -711,6 +965,8 @@ export function fecharBoasVindas(irParaClube = false) {
 
 /** Regista listeners PWA, SW e banner ?ref= (uma vez). */
 export function initClubPwa() {
+  initClubSegmentNav();
+
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     _pwaPrompt = e;

@@ -222,12 +222,6 @@ async function medirUpload(onRate) {
   return (totalBytes * 8) / elapsed / 1e6;
 }
 
-let _completarMissaoRef = async () => {};
-
-export function wireSpeedtestMissions(fn) {
-  _completarMissaoRef = fn;
-}
-
 export async function iniciarSpeedTest() {
   if (S.speedTesting) return;
   S.speedTesting = true;
@@ -409,7 +403,7 @@ function exibirComparacao(dlMbps, ulMbps) {
     barFill.style.width = Math.min(pct * 100, 100) + '%';
   }, 100);
 
-  if (planSpeed) {
+    if (planSpeed) {
     document.getElementById('cmp-plano').textContent = planSpeed + ' Mbps';
     document.getElementById('cmp-plan-marker').style.left = '100%';
 
@@ -418,14 +412,12 @@ function exibirComparacao(dlMbps, ulMbps) {
     let cls;
     let icon;
     let msg;
-    if (ratio >= 1.0) {
-      _completarMissaoRef('speedtest_100', null, false);
-    }
+    // Missões de velocidade (speedtest_100, speedtest_excelente) são concedidas
+    // pelo servidor em /speedtest/registrar — não duplicar a chamada aqui.
     if (ratio >= 0.9) {
       cls = 'badge-excelente';
       icon = 'fa-circle-check';
       msg = `Excelente! ${dlMbps.toFixed(0)} Mbps — dentro do esperado para seu plano.`;
-      _completarMissaoRef('speedtest_excelente', null, false);
     } else if (ratio >= 0.7) {
       cls = 'badge-bom';
       icon = 'fa-thumbs-up';

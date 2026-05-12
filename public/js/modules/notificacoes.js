@@ -28,16 +28,28 @@ export async function loadNotificacoes() {
   if (statusEl) statusEl.textContent = permLabel();
   setToggleDisabled(true);
   try {
-    const data = await request('GET', `${API}/notificacoes/prefs`);
+    // Obtém o endpoint deste dispositivo para checar se ESTE browser está inscrito
+    let endpointParam = '';
+    try {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub?.endpoint) endpointParam = `?endpoint=${encodeURIComponent(sub.endpoint)}`;
+      }
+    } catch (_) {}
+
+    const data = await request('GET', `${API}/notificacoes/prefs${endpointParam}`);
     const p = data.prefs || {};
     const f = document.getElementById('notif-pref-fatura');
     const av = document.getElementById('notif-pref-avisos');
-    if (f) f.checked = !!p.faturaVencimento;
+    const zf = document.getElementById('notif-pref-zap-fatura');
+    if (f)  f.checked  = !!p.faturaVencimento;
     if (av) av.checked = !!p.avisosLemon;
+    if (zf) zf.checked = !!p.zapFaturaVencimento;
     if (subEl) {
       subEl.textContent = data.hasSubscription
-        ? 'Este dispositivo está inscrito para receber push.'
-        : 'Nenhuma inscrição push neste servidor (ativa em "Ativar neste dispositivo").';
+        ? 'Este dispositivo está inscrito para receber notificações push.'
+        : 'Este dispositivo não está inscrito (clique em "Ativar neste dispositivo").';
     }
   } catch (e) {
     showToast(e.message || 'Erro ao carregar notificações.', 'error');
@@ -49,8 +61,9 @@ export async function loadNotificacoes() {
 export async function setPushNotifPref(key, checked) {
   if (_saving) return;
   const body = {};
-  if (key === 'faturaVencimento') body.faturaVencimento = !!checked;
-  else if (key === 'avisosLemon') body.avisosLemon = !!checked;
+  if (key === 'faturaVencimento')    body.faturaVencimento    = !!checked;
+  else if (key === 'avisosLemon')    body.avisosLemon         = !!checked;
+  else if (key === 'zapFaturaVencimento') body.zapFaturaVencimento = !!checked;
   else return;
   _saving = true;
   setToggleDisabled(true);

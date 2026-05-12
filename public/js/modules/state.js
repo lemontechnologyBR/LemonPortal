@@ -34,4 +34,6 @@ export const app = {
   refreshFaturas: null,
   /** @type {() => void} */
   prePopularMissoes: null,
+  /** @type {(uuid: string) => void} */
+  abrirFatura: null,
 };

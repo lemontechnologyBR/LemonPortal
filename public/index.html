@@ -18,6 +18,26 @@
   <link rel="icon" href="/icons/lemon-logo.png" type="image/png" />
 </head>
 <body>
+  <!-- Splash inicial (logo + fundo teal — animação até o load mínimo) -->
+  <div id="lemon-splash" class="lemon-splash" aria-hidden="true">
+    <div class="lemon-splash__inner">
+      <img
+        class="lemon-splash__logo"
+        src="/icons/lemon-logo.png?v=4"
+        alt=""
+        width="400"
+        height="400"
+        decoding="async"
+        fetchpriority="high"
+      />
+      <div class="lemon-splash__loading" aria-hidden="true">
+        <span class="lemon-splash__spinner"></span>
+        <span class="lemon-splash__loading-text" id="lemon-splash-msg">Carregando…</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/portal-early-handlers.js"></script>
 
   <!-- ===== LANDING (#page-landing) — home pública ===== -->
   <div id="page-landing" class="page active">
@@ -148,6 +168,289 @@
     </div>
   </div>
 
+  <!-- ===== R. BARÃO DE CASTRO LIMA — condomínios 125 / 381 (antes dos planos) ===== -->
+  <div id="page-castro-lima-condominios" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner castro-lima-condominios-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarCondominioCastroLimaParaRuas()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">R. Barão de Castro Lima</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual destes condomínios você reside?
+          </p>
+        </div>
+        <div class="rp-azulejos-grid rp-azulejos-grid--condominios castro-lima-condominios-grid" role="group" aria-label="Condomínios">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="confirmarCondominioCastroLima('125')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+            <span class="rp-azulejo-nome">125</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo-brilho" onclick="confirmarCondominioCastroLima('381')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+            <span class="rp-azulejo-nome">381</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== R. CONDE DE ITAGUAÍ — condomínios (antes dos planos) ===== -->
+  <div id="page-itaguai-condominios" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarCondominioItaguaiParaRuas()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">R. Conde de Itaguaí</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual destes condomínios você reside?
+          </p>
+        </div>
+        <div class="rp-azulejos-grid rp-azulejos-grid--condominios rp-itaguai-condominios-grid" role="group" aria-label="Condomínios">
+          <div class="rp-condominios-cinco-numeros" role="presentation">
+            <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho" onclick="confirmarCondominioItaguai('299')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">299</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho" onclick="confirmarCondominioItaguai('300')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">300</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo-brilho" onclick="confirmarCondominioItaguai('321')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">321</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="confirmarCondominioItaguai('340')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">340</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho-escuro" onclick="confirmarCondominioItaguai('380')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">380</span>
+            </button>
+          </div>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ITAGUAÍ — 299: 3 blocos; cada um 9 andares × 5 AP/andar ===== -->
+  <div id="page-itaguai-299-blocos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarItaguai299BlocosParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">Condomínio 299</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual bloco você reside? São 3 blocos; em cada um: 9 andares e 5 apartamentos por andar.
+          </p>
+        </div>
+        <div class="rp-azulejos-grid bourroul-280-blocos-grid" role="group" aria-label="Blocos">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho" onclick="irParaItaguai299Apartamentos(1)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 1</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho" onclick="irParaItaguai299Apartamentos(2)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 2</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irParaItaguai299Apartamentos(3)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 3</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ITAGUAÍ — 299: apartamentos (grelha estilo 308) ===== -->
+  <div id="page-itaguai-299-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarItaguai299ApartamentosParaBlocos()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="itaguai299-apts-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Condomínio 299</h2>
+          <p id="itaguai299-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px"></p>
+        </div>
+        <div id="itaguai299-apts-grid" class="cingapura-apts-grid torre-rp-apts-scroll" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ITAGUAÍ — 321: 4 blocos; cada um 7 andares × 5 AP/andar ===== -->
+  <div id="page-itaguai-321-blocos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarItaguai321BlocosParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">Condomínio 321</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual bloco você reside? São 4 blocos; em cada um: 7 andares e 5 apartamentos por andar.
+          </p>
+        </div>
+        <div class="rp-azulejos-grid rp-itaguai-321-blocos-grid" role="group" aria-label="Blocos">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo-brilho" onclick="irParaItaguai321Apartamentos(1)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 1</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo-brilho" onclick="irParaItaguai321Apartamentos(2)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 2</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irParaItaguai321Apartamentos(3)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 3</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho-escuro" onclick="irParaItaguai321Apartamentos(4)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 4</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ITAGUAÍ — 321: apartamentos (grelha estilo 308) ===== -->
+  <div id="page-itaguai-321-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarItaguai321ApartamentosParaBlocos()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="itaguai321-apts-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Condomínio 321</h2>
+          <p id="itaguai321-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px"></p>
+        </div>
+        <div id="itaguai321-apts-grid" class="cingapura-apts-grid torre-rp-apts-scroll" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ITAGUAÍ — 300 / 340 / 380: escolha do andar (1–9), estilo azulejo ===== -->
+  <div id="page-itaguai-torre-andar" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarItaguaiTorreAndarParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="itaguai-torre-andar-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:8px">Condomínio</h2>
+          <p id="itaguai-torre-andar-sub" style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px"></p>
+        </div>
+        <div class="rp-azulejos-grid rp-itaguai-torre-andar-grid" role="group" aria-label="Andares">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho" onclick="irParaItaguaiTorreApartamentosDoAndar(1)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">1º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho" onclick="irParaItaguaiTorreApartamentosDoAndar(2)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">2º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo-brilho" onclick="irParaItaguaiTorreApartamentosDoAndar(3)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">3º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo-brilho" onclick="irParaItaguaiTorreApartamentosDoAndar(4)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">4º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irParaItaguaiTorreApartamentosDoAndar(5)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">5º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irParaItaguaiTorreApartamentosDoAndar(6)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">6º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho-escuro" onclick="irParaItaguaiTorreApartamentosDoAndar(7)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">7º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-vermelho-escuro" onclick="irParaItaguaiTorreApartamentosDoAndar(8)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">8º andar</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-lima" onclick="irParaItaguaiTorreApartamentosDoAndar(9)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="rp-azulejo-nome">9º andar</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ITAGUAÍ — 300 / 340 / 380: APs do andar (14 unidades) ===== -->
+  <div id="page-itaguai-torre-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarItaguaiTorreApartamentosParaAndar()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="itaguai-torre-apts-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Condomínio</h2>
+          <p id="itaguai-torre-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px"></p>
+        </div>
+        <div id="itaguai-torre-apts-grid" class="cingapura-apts-grid torre-rp-apts-scroll" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== PAULO BOURROUL — condomínio (sub-etapa) ===== -->
   <div id="page-bourroul-condominios" class="page hidden">
     <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
@@ -165,14 +468,28 @@
           </p>
         </div>
         <div class="rp-azulejos-grid rp-azulejos-grid--condominios" role="group" aria-label="Condomínios">
-          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="confirmarCondominioPauloBourroul('Azul 308')">
-            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
-            <span class="rp-azulejo-nome">Azul 308</span>
-          </button>
-          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo" onclick="confirmarCondominioPauloBourroul('Amarelo 280')">
-            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
-            <span class="rp-azulejo-nome">Amarelo 280</span>
-          </button>
+          <div class="rp-condominios-cinco-numeros" role="presentation">
+            <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irPara308Blocos()">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">308</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo" onclick="irPara280Blocos()">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">280</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-teal" onclick="irParaTorreApartamentos('350')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">350</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-violet" onclick="irParaTorreApartamentos('360')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">360</span>
+            </button>
+            <button type="button" class="rp-azulejo rp-azulejo--cor-rose" onclick="irParaTorreApartamentos('370')">
+              <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
+              <span class="rp-azulejo-nome">370</span>
+            </button>
+          </div>
           <button type="button" class="rp-azulejo rp-azulejo--cor-lima rp-azulejo--condominio-destaque" onclick="irParaCingapuraLetra()">
             <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-building"></i></span>
             <span class="rp-azulejo-nome">Cingapura</span>
@@ -180,6 +497,142 @@
         </div>
         <div class="regiao-ilustracao-wrap" aria-hidden="true">
           <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — 308: escolha do bloco (1 ou 2) ===== -->
+  <div id="page-bourroul-308-blocos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltar308BlocosParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">Condomínio 308</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual bloco você reside?
+          </p>
+        </div>
+        <div class="rp-azulejos-grid rp-azulejos-grid--condominios" style="max-width:400px;margin:0 auto" role="group" aria-label="Blocos">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irPara308Apartamentos(1)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 1</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo" onclick="irPara308Apartamentos(2)">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco 2</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — 308: apartamentos (8 andares × 5, AP11–AP85, estilo Cingapura) ===== -->
+  <div id="page-bourroul-308-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltar308ApartamentosParaBlocos()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="torre308-apts-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Condomínio 308</h2>
+          <p id="torre308-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px"></p>
+        </div>
+        <div id="torre308-apts-grid" class="cingapura-apts-grid torre-rp-apts-scroll" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — 280: blocos B1, B2, B3 ===== -->
+  <div id="page-bourroul-280-blocos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner bourroul-condominios-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltar280BlocosParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:24px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 style="font-size:1.28rem;font-weight:800;margin-bottom:8px">Condomínio 280</h2>
+          <p style="color:var(--text-muted);font-size:0.88rem;line-height:1.5;margin:0 auto;max-width:400px">
+            Em qual bloco você reside?
+          </p>
+        </div>
+        <div class="rp-azulejos-grid bourroul-280-blocos-grid" role="group" aria-label="Blocos">
+          <button type="button" class="rp-azulejo rp-azulejo--cor-azul" onclick="irPara280Apartamentos('B1')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco B1</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-amarelo" onclick="irPara280Apartamentos('B2')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco B2</span>
+          </button>
+          <button type="button" class="rp-azulejo rp-azulejo--cor-teal" onclick="irPara280Apartamentos('B3')">
+            <span class="rp-azulejo-icone" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span>
+            <span class="rp-azulejo-nome">Bloco B3</span>
+          </button>
+        </div>
+        <div class="regiao-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/bourroul-edificios.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — 280: apartamentos (B1: 8×4; B2/B3: 8×5, estilo Cingapura) ===== -->
+  <div id="page-bourroul-280-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltar280ApartamentosParaBlocos()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="torre280-apts-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Condomínio 280</h2>
+          <p id="torre280-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px"></p>
+        </div>
+        <div id="torre280-apts-grid" class="cingapura-apts-grid torre-rp-apts-scroll" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAULO BOURROUL — Torres 350/360/370: AP (7 andares × 4, AP11–AP74, estilo Cingapura) ===== -->
+  <div id="page-bourroul-torre-apartamentos" class="page hidden">
+    <div class="login-bg regiao-page-bg" style="align-items:flex-start;padding:32px 20px">
+      <div class="regiao-page-inner cingapura-apts-page-inner">
+        <button type="button" class="login-back-btn" style="margin:0 0 24px" onclick="voltarTorreApartamentosParaCondominios()">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button>
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="logo-icon sm brand-logo" style="margin:0 auto 12px" aria-hidden="true">
+            <img src="/icons/lemon-logo.png" alt="" width="150" height="150" decoding="async" />
+          </div>
+          <h2 id="torre-apts-titulo" style="font-size:1.28rem;font-weight:800;margin-bottom:6px">Condomínio</h2>
+          <p id="torre-apts-subtitulo" style="color:var(--text-muted);font-size:0.88rem;line-height:1.45;margin:0 auto;max-width:420px"></p>
+        </div>
+        <div id="torre-apts-grid" class="cingapura-apts-grid torre-rp-apts-scroll" role="group" aria-label="Apartamentos"></div>
+        <div class="regiao-ilustracao-wrap cingapura-apts-ilustracao-wrap" aria-hidden="true">
+          <img src="/images/cingapura-house-searching.svg" alt="" class="regiao-ilustracao-svg" width="500" height="500" decoding="async" loading="lazy" />
         </div>
       </div>
     </div>
@@ -719,13 +1172,6 @@
               <span class="dash-tile-label">Teste de Velocidade</span>
             </button>
 
-            <button class="dash-tile" onclick="navTo('watch')">
-              <div class="dash-tile-icon">
-                <i class="fa-solid fa-tv"></i>
-              </div>
-              <span class="dash-tile-label">Watch TV</span>
-            </button>
-
             <button class="dash-tile" onclick="navTo('suporte')">
               <div class="dash-tile-icon">
                 <i class="fa-solid fa-headset"></i>
@@ -1128,6 +1574,18 @@
             <p>Ganhe pontos, suba de nível e troque por benefícios</p>
           </div>
 
+          <nav class="club-seg-nav" role="tablist" aria-label="Secções do Lemon Club">
+            <button type="button" class="club-seg-btn active" role="tab" aria-selected="true"  data-club-seg="resumo">   <i class="fa-solid fa-star"></i>             Resumo</button>
+            <button type="button" class="club-seg-btn"        role="tab" aria-selected="false" data-club-seg="cupons">   <i class="fa-solid fa-ticket"></i>           Cupons</button>
+            <button type="button" class="club-seg-btn"        role="tab" aria-selected="false" data-club-seg="resgates"> <i class="fa-solid fa-gift"></i>             Resgatar</button>
+            <button type="button" class="club-seg-btn"        role="tab" aria-selected="false" data-club-seg="indicar">  <i class="fa-solid fa-user-plus"></i>        Indicar</button>
+            <button type="button" class="club-seg-btn"        role="tab" aria-selected="false" data-club-seg="desafios"> <i class="fa-solid fa-bullseye"></i>         Desafios</button>
+            <button type="button" class="club-seg-btn"        role="tab" aria-selected="false" data-club-seg="historico"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
+          </nav>
+
+          <div class="club-seg-panels">
+          <div class="club-seg-panel active" id="club-panel-resumo" role="tabpanel" data-club-panel="resumo">
+
           <!-- Nível + Pontos Hero -->
           <div class="club-hero">
             <div class="club-hero-glow"></div>
@@ -1175,9 +1633,9 @@
               </div>
               <div class="club-earn-info">
                 <div class="club-earn-title">Pagar em dia</div>
-                <div class="club-earn-desc">+25 pts por fatura paga no vencimento</div>
+                <div class="club-earn-desc">+50 pts por fatura paga no vencimento</div>
               </div>
-              <div class="club-earn-pts">+25</div>
+              <div class="club-earn-pts">+50</div>
             </div>
             <div class="club-earn-card">
               <div class="club-earn-icon" style="background:rgba(182,195,63,0.1);border-color:rgba(182,195,63,0.2)">
@@ -1185,9 +1643,9 @@
               </div>
               <div class="club-earn-info">
                 <div class="club-earn-title">Indicar amigo</div>
-                <div class="club-earn-desc">+100 pts quando o indicado assinar</div>
+                <div class="club-earn-desc">+200 pts quando o indicado assinar</div>
               </div>
-              <div class="club-earn-pts">+100</div>
+              <div class="club-earn-pts">+200</div>
             </div>
             <div class="club-earn-card">
               <div class="club-earn-icon" style="background:rgba(251,146,60,0.1);border-color:rgba(251,146,60,0.2)">
@@ -1211,6 +1669,10 @@
             </div>
           </div>
 
+          </div>
+
+          <div class="club-seg-panel" id="club-panel-desafios" role="tabpanel" data-club-panel="desafios">
+
           <!-- Missões -->
           <div class="card" style="margin-bottom:20px">
             <div class="card-header">
@@ -1221,6 +1683,10 @@
               <div class="spinner"></div>
             </div>
           </div>
+
+          </div>
+
+          <div class="club-seg-panel" id="club-panel-resgates" role="tabpanel" data-club-panel="resgates">
 
           <!-- Resgatar benefícios -->
           <div class="card" style="margin-bottom:20px">
@@ -1249,7 +1715,7 @@
               <div class="club-reward-card" id="reward-desconto_20">
                 <div class="club-reward-top">
                   <div class="club-reward-icon">💰</div>
-                  <div class="club-reward-badge">180 pts</div>
+                  <div class="club-reward-badge">200 pts</div>
                 </div>
                 <div class="club-reward-title">20% na fatura</div>
                 <div class="club-reward-desc">Desconto de 20% sobre o valor da próxima fatura</div>
@@ -1261,7 +1727,7 @@
               <div class="club-reward-card" id="reward-desconto_30">
                 <div class="club-reward-top">
                   <div class="club-reward-icon">💵</div>
-                  <div class="club-reward-badge">260 pts</div>
+                  <div class="club-reward-badge">300 pts</div>
                 </div>
                 <div class="club-reward-title">30% na fatura</div>
                 <div class="club-reward-desc">Desconto de 30% sobre o valor da próxima fatura</div>
@@ -1273,7 +1739,7 @@
               <div class="club-reward-card" id="reward-desconto_40">
                 <div class="club-reward-top">
                   <div class="club-reward-icon">💴</div>
-                  <div class="club-reward-badge">340 pts</div>
+                  <div class="club-reward-badge">400 pts</div>
                 </div>
                 <div class="club-reward-title">40% na fatura</div>
                 <div class="club-reward-desc">Desconto de 40% sobre o valor da próxima fatura</div>
@@ -1285,7 +1751,7 @@
               <div class="club-reward-card" id="reward-desconto_50">
                 <div class="club-reward-top">
                   <div class="club-reward-icon">🤑</div>
-                  <div class="club-reward-badge">420 pts</div>
+                  <div class="club-reward-badge">500 pts</div>
                 </div>
                 <div class="club-reward-title">50% na fatura</div>
                 <div class="club-reward-desc">Desconto de 50% sobre o valor da próxima fatura</div>
@@ -1297,7 +1763,7 @@
               <div class="club-reward-card" id="reward-desconto_80">
                 <div class="club-reward-top">
                   <div class="club-reward-icon">💎</div>
-                  <div class="club-reward-badge">650 pts</div>
+                  <div class="club-reward-badge">800 pts</div>
                 </div>
                 <div class="club-reward-title">80% na fatura</div>
                 <div class="club-reward-desc">Desconto de 80% sobre o valor da próxima fatura</div>
@@ -1354,7 +1820,7 @@
                   <div class="club-reward-badge">350 pts</div>
                 </div>
                 <div class="club-reward-title">Indicações em dobro</div>
-                <div class="club-reward-desc">Ganhe 200 pts nas próximas 2 indicações em vez de 100</div>
+                <div class="club-reward-desc">Ganhe 400 pts nas próximas 2 indicações em vez de 200</div>
                 <button class="club-reward-btn" onclick="resgatarBeneficio('indicacao_dobro', this)">
                   <i class="fa-solid fa-check"></i> Resgatar
                 </button>
@@ -1454,7 +1920,7 @@
               <div class="club-reward-card club-reward-top-card" id="reward-desconto_100">
                 <div class="club-reward-top">
                   <div class="club-reward-icon">💯</div>
-                  <div class="club-reward-badge club-reward-badge-gold">1050 pts</div>
+                  <div class="club-reward-badge club-reward-badge-gold">1000 pts</div>
                 </div>
                 <div class="club-reward-title">100% na fatura</div>
                 <div class="club-reward-desc">Desconto integral (100%) sobre o valor da próxima fatura</div>
@@ -1515,13 +1981,17 @@
             <div id="club-reward-msg" style="margin-top:14px"></div>
           </div>
 
+          </div>
+
+          <div class="club-seg-panel" id="club-panel-indicar" role="tabpanel" data-club-panel="indicar">
+
           <!-- Link de indicação -->
           <div class="card" style="margin-bottom:20px">
             <div class="card-header">
               <h3><i class="fa-solid fa-link"></i> Seu link de indicação</h3>
             </div>
             <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px">
-              Compartilhe e ganhe <strong style="color:var(--lemon)">100 pontos</strong> a cada amigo que se cadastrar.
+              Compartilhe e ganhe <strong style="color:var(--lemon)">200 pontos</strong> a cada amigo que se cadastrar.
             </p>
             <div class="ref-link-box">
               <span id="ref-link-text" class="ref-link-text">—</span>
@@ -1539,6 +2009,10 @@
             </div>
           </div>
 
+          </div>
+
+          <div class="club-seg-panel" id="club-panel-historico" role="tabpanel" data-club-panel="historico">
+
           <!-- Log de pontos -->
           <div class="card">
             <div class="card-header">
@@ -1547,6 +2021,20 @@
             <div id="ref-historico-list" class="list-placeholder">
               <div class="spinner"></div>
             </div>
+          </div>
+
+          </div>
+
+          <!-- Aba Cupons -->
+          <div class="club-seg-panel" id="club-panel-cupons" role="tabpanel" data-club-panel="cupons">
+            <div id="club-cupons-body">
+              <div class="cupom-empty">
+                <div class="cupom-empty__icon"><i class="fa-solid fa-ticket"></i></div>
+                <p class="cupom-empty__title">Carregando cupons…</p>
+              </div>
+            </div>
+          </div>
+
           </div>
         </div>
 
@@ -1645,14 +2133,15 @@
             <div class="perfil-carteira-head">
               <div>
                 <h3 class="perfil-carteira-title"><i class="fa-solid fa-wallet"></i> Minha carteira</h3>
-                <p class="perfil-carteira-sub">Cartões salvos com segurança no Mercado Pago para pagamentos e assinaturas.</p>
+                <p class="perfil-carteira-sub">Cartões salvos com segurança no Mercado Pago para pagamentos.</p>
               </div>
               <button type="button" class="btn btn-secondary perfil-carteira-add-btn" id="btn-carteira-toggle" onclick="toggleCarteiraAddForm()">
                 <i class="fa-solid fa-plus"></i> Adicionar cartão
               </button>
             </div>
+            <div id="carteira-feedback" class="alert hidden" role="status" aria-live="polite" style="margin-bottom:12px"></div>
             <div id="carteira-add-panel" class="carteira-add-panel hidden">
-              <p class="carteira-add-hint">Os dados do cartão são enviados direto ao Mercado Pago; o portal só recebe um token seguro.</p>
+              <p class="carteira-add-hint">Os dados do cartão vão direto ao Mercado Pago (o portal só usa um token seguro). Na tokenização o MP valida número, validade e CVV; ao salvar, a API do Mercado Pago só associa o cartão ao seu cadastro se aceitar — <strong>não há cobrança</strong> neste momento. No primeiro pagamento o banco pode pedir confirmação extra (ex.: 3DS).</p>
               <div id="carteira-mp-ambiente" class="carteira-mp-ambiente"></div>
               <input type="text" id="carteira-nome" placeholder="Nome impresso no cartão" autocomplete="cc-name" class="carteira-input" />
               <input type="text" id="carteira-num" placeholder="Número do cartão" inputmode="numeric" autocomplete="cc-number" class="carteira-input" />
@@ -1661,6 +2150,10 @@
                 <input type="text" id="carteira-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" autocomplete="cc-exp-year" class="carteira-input" />
                 <input type="text" id="carteira-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" class="carteira-input" />
               </div>
+              <label class="carteira-debito-opt">
+                <input type="checkbox" id="carteira-debito-auto" />
+                <span>Após guardar, abrir no Mercado Pago para <strong>autorizar cobrança mensal automática</strong> no cartão (valor igual à sua fatura em aberto ou vencida mais próxima). É diferente de só guardar o cartão na carteira. Cancelamento pelo Mercado Pago.</span>
+              </label>
               <input type="text" id="carteira-cpf" placeholder="CPF do titular" inputmode="numeric" class="carteira-input" />
               <div class="carteira-add-actions">
                 <button type="button" class="btn btn-primary" id="btn-carteira-salvar" onclick="confirmarCarteiraAdd()">
@@ -1743,6 +2236,11 @@
           </div>
 
           <!-- Ações rápidas -->
+          <div class="card" style="margin-top:8px;border:none;background:transparent;box-shadow:none;padding:0">
+            <button onclick="logout()" style="width:100%;padding:14px 20px;border:1px solid rgba(239,68,68,.2);border-radius:12px;background:rgba(239,68,68,.04);color:#ef4444;font-size:.92rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;transition:all .2s">
+              <i class="fa-solid fa-right-from-bracket"></i> Sair da conta
+            </button>
+          </div>
 
         </div>
 
@@ -1768,18 +2266,30 @@
           </div>
           <div class="card">
             <div class="card-header">
-              <h3><i class="fa-solid fa-sliders"></i> Tipos de aviso</h3>
+              <h3><i class="fa-solid fa-sliders"></i> Notificações por Push</h3>
             </div>
             <p class="text-muted" style="margin:0 0 16px;font-size:0.92rem">
-              Avisos da Lemon (admin) respeitam a opção “Novidades e avisos”. Lembretes de fatura são enviados pelo servidor quando há título em aberto (até 7 dias antes ou em atraso recente), no máximo uma vez por dia.
+              Lembretes de fatura são enviados quando há título em aberto (até 14 dias antes ou em atraso), no máximo uma vez por dia. Avisos gerais respeitam a opção "Novidades e avisos".
             </p>
             <label class="field-row" style="align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer">
-              <span><strong>Lembretes de fatura</strong><br><span class="text-muted" style="font-size:0.88rem">Vencimento e faturas em aberto</span></span>
+              <span><strong>Lembretes de fatura</strong><br><span class="text-muted" style="font-size:0.88rem">Vencimento e faturas em aberto (push)</span></span>
               <input type="checkbox" id="notif-pref-fatura" onchange="setPushNotifPref('faturaVencimento', this.checked)" />
             </label>
             <label class="field-row" style="align-items:center;justify-content:space-between;cursor:pointer">
-              <span><strong>Novidades e avisos Lemon</strong><br><span class="text-muted" style="font-size:0.88rem">Mensagens gerais enviadas pela equipa</span></span>
+              <span><strong>Novidades e avisos Lemon</strong><br><span class="text-muted" style="font-size:0.88rem">Mensagens gerais enviadas pela equipa (push)</span></span>
               <input type="checkbox" id="notif-pref-avisos" onchange="setPushNotifPref('avisosLemon', this.checked)" />
+            </label>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div class="card-header">
+              <h3><i class="fa-brands fa-whatsapp"></i> Notificações por WhatsApp</h3>
+            </div>
+            <p class="text-muted" style="margin:0 0 16px;font-size:0.92rem">
+              Receba um lembrete no WhatsApp quando sua fatura estiver próxima do vencimento ou em atraso. No máximo uma mensagem por dia.
+            </p>
+            <label class="field-row" style="align-items:center;justify-content:space-between;cursor:pointer">
+              <span><strong>Lembrete de fatura por WhatsApp</strong><br><span class="text-muted" style="font-size:0.88rem">Desativado por padrão — ative se quiser receber</span></span>
+              <input type="checkbox" id="notif-pref-zap-fatura" onchange="setPushNotifPref('zapFaturaVencimento', this.checked)" />
             </label>
           </div>
         </div>

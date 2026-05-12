@@ -6,6 +6,14 @@
  */
 
 const API = '/portal';
+/** Portal: secção Watch TV (espelhar `FEATURE_WATCH_TV` em `modules/constants.js` ao usar build:portal). */
+const FEATURE_WATCH_TV = false;
+/** Pagamento único fatura no cartão (MP Payments). */
+const MP_API_FATURA_CARTAO = `${API}/pagamento/fatura/cartao`;
+const _MP_SUB_FIELD_STYLE =
+  'width:100%;min-width:0;box-sizing:border-box;margin:0;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;font-family:inherit;line-height:1.3;-webkit-appearance:none;appearance:none';
+const _MP_SUB_EXPIRY_ROW_STYLE =
+  'display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);gap:8px;margin-bottom:8px;width:100%;min-width:0;box-sizing:border-box;align-items:stretch';
 let clienteData = null;
 
 // ===== UTILS =====
@@ -75,7 +83,8 @@ function showAlert(elId, msg, type = 'error') {
 
 // ===== NAVEGAÇÃO =====
 
-function navTo(view) {
+async function navTo(view) {
+  if (!FEATURE_WATCH_TV && view === 'watch') view = 'dashboard';
   document.querySelectorAll('.view').forEach(v => {
     v.classList.remove('active');
     v.classList.add('hidden');
@@ -113,12 +122,12 @@ function navTo(view) {
     _connInterval = null;
   }
 
-  if (view === 'dashboard')  loadDashboard();
+  if (view === 'dashboard') await loadDashboard();
   if (view === 'faturas')    { loadFaturas();    missaoVisita('ver_fatura'); }
   if (view === 'suporte')    { loadChamados();   missaoVisita('ver_suporte_sec'); }
   if (view === 'conexao')    { loadConexao();    missaoVisita('ver_conexao'); }
   if (view === 'velocidade') { loadVelocidade(); missaoVisita('ver_velocidade_sec'); }
-  if (view === 'indicacoes') { loadIndicacoes(); missaoVisita('ver_clube'); }
+  if (view === 'indicacoes') { loadIndicacoes({ resetSegment: true }); missaoVisita('ver_clube'); }
   if (view === 'perfil')     { loadPerfil();     missaoVisita('ver_perfil_sec'); }
   if (view === 'notificacoes') loadNotificacoes();
   if (view === 'watch')      loadWatchBrasil();
@@ -185,6 +194,8 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;margin:0"></div>';
 
+  if (typeof window.__lemonSplashShow === 'function') window.__lemonSplashShow();
+
   try {
     const res = await request('POST', `${API}/login`, { cpf });
     const primeiroNome = (res.nome || cpf).split(' ')[0];
@@ -196,7 +207,7 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
     document.getElementById('page-login').classList.remove('active');
     document.getElementById('page-login').classList.add('hidden');
     document.getElementById('page-portal').classList.remove('hidden');
-    navTo('dashboard');
+    await navTo('dashboard');
     // Pré-população do cache de missões (silenciosa, em background)
     _prePopularCacheMissoes();
     // Missão de primeiro acesso (silencioso)
@@ -219,13 +230,29 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
     document.getElementById('login-error').classList.remove('hidden');
     btn.disabled = false;
     btn.innerHTML = '<span>Entrar</span><i class="fa-solid fa-arrow-right"></i>';
+  } finally {
+    if (typeof window.__lemonSplashHide === 'function') window.__lemonSplashHide();
   }
 });
 
 // ===== LOGOUT =====
 
 async function logout() {
+  // Cancela intervalos pendentes antes de limpar o estado
+  if (typeof _connInterval !== 'undefined' && _connInterval) {
+    clearInterval(_connInterval);
+    _connInterval = null;
+  }
+
   try { await request('POST', `${API}/logout`); } catch (_) {}
+
+  // Reseta estado em memória
+  clienteData = null;
+  faturasCarregadas = { abertas: false, vencidas: false, pagas: false };
+
+  // Limpa cache de missões do sessionStorage
+  sessionStorage.removeItem('lemon_miss');
+
   document.getElementById('page-portal').classList.add('hidden');
   document.getElementById('page-login').classList.remove('active');
   document.getElementById('page-login').classList.add('hidden');
@@ -871,6 +898,31 @@ function _dashDaysUntilVenc(datavencStr) {
   return Math.round((dueDay - today) / 86400000);
 }
 
+function _dashMergeTitulosPortal(abertasS, vencidasS) {
+  const merged = [];
+  const seen = new Set();
+  const pushList = (list) => {
+    for (const t of list || []) {
+      if (!t || typeof t !== 'object') continue;
+      const id = String(t.uuid ?? t.id ?? '').trim();
+      const key = id || `${t.datavenc}|${t.valor}|${t.tipo}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(t);
+    }
+  };
+  if (abertasS?.status === 'fulfilled') pushList(abertasS.value?.titulos);
+  if (vencidasS?.status === 'fulfilled') pushList(vencidasS.value?.titulos);
+  const fetchOk = abertasS?.status === 'fulfilled' || vencidasS?.status === 'fulfilled';
+  return { titulos: merged, fetchOk };
+}
+
+function _dashBannerSettledMerged(abertasS, vencidasS) {
+  const { titulos, fetchOk } = _dashMergeTitulosPortal(abertasS, vencidasS);
+  if (!fetchOk) return abertasS?.status !== 'fulfilled' ? abertasS : vencidasS;
+  return { status: 'fulfilled', value: { titulos } };
+}
+
 function renderDashProximoVencimento(abertasSettled) {
   const el = document.getElementById('dash-vencimento-banner');
   if (!el) return;
@@ -896,7 +948,7 @@ function renderDashProximoVencimento(abertasSettled) {
       <div class="dash-vencimento-inner">
         <div class="dash-vencimento-icon"><i class="fa-solid fa-circle-check"></i></div>
         <div class="dash-vencimento-text">
-          <div class="dash-vencimento-title">Sem faturas em aberto</div>
+          <div class="dash-vencimento-title">Sem faturas pendentes</div>
           <div class="dash-vencimento-sub">Estás em dia. Consulta o histórico em <strong>Minhas Faturas</strong> quando precisares.</div>
         </div>
         <button type="button" class="btn btn-ghost btn-sm dash-vencimento-cta" onclick="navTo('faturas')">Ver faturas</button>
@@ -914,7 +966,7 @@ function renderDashProximoVencimento(abertasSettled) {
       <div class="dash-vencimento-inner">
         <div class="dash-vencimento-icon"><i class="fa-solid fa-receipt"></i></div>
         <div class="dash-vencimento-text">
-          <div class="dash-vencimento-title">Faturas em aberto</div>
+          <div class="dash-vencimento-title">Faturas pendentes</div>
           <div class="dash-vencimento-sub">Abre <strong>Minhas Faturas</strong> para veres valores e datas.</div>
         </div>
         <button type="button" class="btn btn-ghost btn-sm dash-vencimento-cta" onclick="navTo('faturas')">Ver faturas</button>
@@ -1193,15 +1245,18 @@ async function loadWatchBrasil() {
 
 async function loadDashboard() {
   let rAbertas = null;
+  let rVencidas = null;
   let rAvisos = null;
   try {
-    const [me, abertas, clube, avisos] = await Promise.allSettled([
+    const [me, abertas, vencidas, clube, avisos] = await Promise.allSettled([
       request('GET', `${API}/me`),
       request('GET', `${API}/faturas/abertas`),
+      request('GET', `${API}/faturas/vencidas`),
       request('GET', `${API}/clube/stats`),
       request('GET', `${API}/avisos`),
     ]);
     rAbertas = abertas;
+    rVencidas = vencidas;
     rAvisos = avisos;
 
     if (me.status === 'fulfilled') {
@@ -1244,9 +1299,9 @@ async function loadDashboard() {
       document.getElementById('dash-venc').textContent  = clienteData.venc ? `Dia ${clienteData.venc}` : '--';
     }
 
-    if (abertas.status === 'fulfilled') {
-      const titulos = abertas.value.titulos || [];
-      const count = titulos.length;
+    const { titulos: titulosPendentes, fetchOk: fatFetchOk } = _dashMergeTitulosPortal(abertas, vencidas);
+    if (fatFetchOk) {
+      const count = titulosPendentes.length;
       document.getElementById('dash-faturas').textContent = count;
       // Badge no tile
       const badge = document.getElementById('tile-badge-faturas');
@@ -1274,7 +1329,7 @@ async function loadDashboard() {
   } catch (err) {
     console.error('Erro no dashboard:', err);
   } finally {
-    renderDashProximoVencimento(rAbertas);
+    renderDashProximoVencimento(_dashBannerSettledMerged(rAbertas, rVencidas));
     renderDashAvisos(rAvisos);
     await loadDashHeadlinesFromRss();
     await loadDashWeatherOpenMeteo();
@@ -1376,15 +1431,108 @@ function _faturaNum(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Lê montante repetido entre raiz, dados, data (MK pode aninhar). */
+function _faturaMkMonetaryMax(t, campo) {
+  const d = typeof t?.data === 'object' && t.data ? t.data : null;
+  const vals = [
+    _faturaNum(t?.[campo]),
+    _faturaNum(t?.dados?.[campo]),
+    _faturaNum(t?.titulo?.[campo]),
+    _faturaNum(t?.titulo?.dados?.[campo]),
+    d != null ? _faturaNum(d[campo]) : NaN,
+    d?.dados != null ? _faturaNum(d.dados[campo]) : NaN,
+  ].filter((n) => Number.isFinite(n));
+  return vals.length ? Math.max(...vals) : 0;
+}
+
+/** Principal do título quando a raiz vem zerada ou em data.titulo. */
+function _faturaMkPrincipal(t) {
+  const d = typeof t?.data === 'object' && t.data ? t.data : null;
+  let primeiroPos = NaN;
+  let ultimo = NaN;
+  for (const raw of [
+    t?.valor,
+    t?.dados?.valor,
+    d?.valor,
+    d?.dados?.valor,
+    t?.titulo?.valor,
+    t?.titulo?.dados?.valor,
+  ]) {
+    const n = _faturaNum(raw);
+    if (!Number.isFinite(n)) continue;
+    ultimo = n;
+    if (n > 0.004 && !Number.isFinite(primeiroPos)) primeiroPos = n;
+  }
+  return Number.isFinite(primeiroPos) ? primeiroPos : ultimo;
+}
+
+/** Subtotal aberto antes do Lemon Club (= soma física igual ao servidor). */
+function _faturaSubtotalAbertoSemCupomLista(t) {
+  const p = _faturaMkPrincipal(t);
+  const m = _faturaMkMonetaryMax(t, 'valormulta');
+  const mo = _faturaMkMonetaryMax(t, 'valormora');
+  const d = _faturaMkMonetaryMax(t, 'valordesc');
+  return Math.round((p + m + mo - d) * 100) / 100;
+}
+
+/** Cupom Lemon: subtotal físico ± %; corrige valores da API quando soma não fecha. */
+function faturaLemonCupomReconciliado(t, isPago) {
+  if (
+    isPago ||
+    !t?.lemon_clube_desconto_resgatado ||
+    t.lemon_clube_cupom_outra_fatura
+  ) {
+    return null;
+  }
+  const pct = Number(t.lemon_clube_desconto_percent);
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 100) return null;
+  const subAntesCupom = _faturaSubtotalAbertoSemCupomLista(t);
+  if (!Number.isFinite(subAntesCupom) || subAntesCupom <= 0) return null;
+  const descCalc = Math.round((subAntesCupom * pct) / 100 * 100) / 100;
+  const pagarCalc = Math.max(0, Math.round((subAntesCupom - descCalc) * 100) / 100);
+  const apiPag = Number(t.lemon_clube_valor_a_pagar);
+  const apiDesc = Number(t.lemon_clube_valor_desconto);
+  const apiFecha =
+    Number.isFinite(apiPag) &&
+    Number.isFinite(apiDesc) &&
+    Math.abs(apiPag + apiDesc - subAntesCupom) <= 0.071;
+  if (apiFecha) {
+    return { subAntesCupom, valorDesconto: apiDesc, valorAPagar: apiPag };
+  }
+  return { subAntesCupom, valorDesconto: descCalc, valorAPagar: pagarCalc };
+}
+
 /** Valor cobrado no Mercado Pago (com desconto Lemon Club no título alvo, se houver). */
 function faturaValorMercadoPago(t, isPago) {
-  const v0 = parseFloat(t?.valor);
-  const base = Number.isFinite(v0) ? v0 : 0;
-  if (isPago || !t?.lemon_clube_desconto_resgatado) return base;
+  if (isPago) {
+    const v0 = parseFloat(t?.valor);
+    return Number.isFinite(v0) ? v0 : _faturaMkPrincipal(t);
+  }
+  if (!t?.lemon_clube_desconto_resgatado) return _faturaMkPrincipal(t);
+  const lr = faturaLemonCupomReconciliado(t, isPago);
+  if (lr != null) return lr.valorAPagar;
   const v = Number(t.lemon_clube_valor_a_pagar);
   const desc = Number(t.lemon_clube_valor_desconto);
+  const cupomNoSubtotal = !!t.lemon_clube_cupom_sobre_subtotal;
+  if (Number.isFinite(v) && cupomNoSubtotal) return v;
   if (Number.isFinite(v) && Number.isFinite(desc) && desc > 0.004) return v;
-  return base;
+  return _faturaMkPrincipal(t);
+}
+
+/** Total a pagar no portal: com cupom já reflete multa/juros; sem cupom = principal + encargos − desconto MK. */
+function faturaValorTotalCobrancaPortal(t, isPago) {
+  if (isPago) {
+    const vp = _faturaNum(t.valorpag);
+    if (vp > 0.004) return Math.round(vp * 100) / 100;
+    return Math.round((_faturaMkPrincipal(t) || _faturaNum(t.valor)) * 100) / 100;
+  }
+  const lr = faturaLemonCupomReconciliado(t, false);
+  if (lr != null) return Math.round(lr.valorAPagar * 100) / 100;
+  const base = _faturaMkPrincipal(t);
+  const multa = _faturaMkMonetaryMax(t, 'valormulta');
+  const mora = _faturaMkMonetaryMax(t, 'valormora');
+  const desc = _faturaMkMonetaryMax(t, 'valordesc');
+  return Math.round((base + multa + mora - desc) * 100) / 100;
 }
 
 function faturaTipoTitulo(t) {
@@ -1511,34 +1659,46 @@ function faturaListaExtrasHtml(t, tipo) {
 }
 
 function faturaListaValorCol(t, tipo) {
-  const base = _faturaNum(t.valor);
-  const extra = _faturaNum(t.valormulta) + _faturaNum(t.valormora);
-  const total = base + extra;
+  const extraFusion = _faturaMkMonetaryMax(t, 'valormulta') + _faturaMkMonetaryMax(t, 'valormora');
+  const descMkFusion = _faturaMkMonetaryMax(t, 'valordesc');
+  const principalFusion = _faturaMkPrincipal(t);
   const isPago = tipo === 'paga';
-  const vMp = faturaValorMercadoPago(t, isPago);
+  const totalPagar = faturaValorTotalCobrancaPortal(t, isPago);
   const pct = t.lemon_clube_desconto_percent != null ? Number(t.lemon_clube_desconto_percent) : null;
-  const descVal = t.lemon_clube_valor_desconto != null ? Number(t.lemon_clube_valor_desconto) : null;
   const temCupom =
-    tipo !== 'paga' && t.lemon_clube_desconto_resgatado && Math.abs(vMp - base) > 0.02;
+    tipo !== 'paga' &&
+    t.lemon_clube_desconto_resgatado &&
+    (t.lemon_clube_cupom_sobre_subtotal ||
+      (Number.isFinite(Number(t.lemon_clube_valor_desconto)) && Number(t.lemon_clube_valor_desconto) > 0.004));
 
   let html = '';
   if (temCupom) {
+    const lrOpen = faturaLemonCupomReconciliado(t, false);
+    const subAntesCupom = lrOpen ? lrOpen.subAntesCupom : _faturaSubtotalAbertoSemCupomLista(t);
+    const econ = lrOpen ? lrOpen.valorDesconto : Math.max(0, Math.round((subAntesCupom - totalPagar) * 100) / 100);
     const pctTxt = pct != null && Number.isFinite(pct) ? `${pct}%` : '';
+    const microParts = [`principal ${fmtMoeda(principalFusion)}`];
+    if (extraFusion > 0.004) microParts.push(`multa/juros ${fmtMoeda(extraFusion)}`);
+    if (descMkFusion > 0.004) microParts.push(`descontos MK −${fmtMoeda(descMkFusion)}`);
+
     html += `<div class="fatura-valor-cupom-wrap">`;
     html += `<div class="fatura-valor-cupom-kicker"><i class="fa-solid fa-lemon" aria-hidden="true"></i> Cupom Lemon Club${pctTxt ? ` ${pctTxt}` : ''}</div>`;
-    html += `<div class="fatura-valor fatura-valor--cupom">${fmtMoeda(vMp)}</div>`;
-    html += `<div class="fatura-valor-cupom-legend">Total a pagar no portal (PIX ou cartão)</div>`;
+    html += `<div class="fatura-valor fatura-valor--cupom">${fmtMoeda(totalPagar)}</div>`;
+    html += `<div class="fatura-valor-cupom-legend">Valor final no portal (PIX / cartão)</div>`;
     html += `<div class="fatura-valor-cupom-break">`;
-    html += `<div class="fatura-valor-cupom-line"><span class="fatura-valor-cupom-label">Valor da fatura</span><span class="fatura-valor-cupom-de">${fmtMoeda(t.valor)}</span></div>`;
-    if (descVal != null && Number.isFinite(descVal) && descVal > 0.004) {
-      html += `<div class="fatura-valor-cupom-line fatura-valor-cupom-line--save"><span class="fatura-valor-cupom-label">Desconto do cupom</span><span class="fatura-valor-cupom-save">− ${fmtMoeda(descVal)}</span></div>`;
+    html += `<div class="fatura-valor-cupom-micro">${microParts.join(' · ')}</div>`;
+    html += `<div class="fatura-valor-cupom-line"><span class="fatura-valor-cupom-label">Subtotal antes do cupom</span><span class="fatura-valor-cupom-num">${fmtMoeda(subAntesCupom)}</span></div>`;
+    if (econ > 0.009) {
+      html += `<div class="fatura-valor-cupom-line fatura-valor-cupom-line--save"><span class="fatura-valor-cupom-label">Desconto Lemon Club${pctTxt ? ` (${pctTxt.trim()})` : ''}</span><span class="fatura-valor-cupom-save">− ${fmtMoeda(econ)}</span></div>`;
     }
     html += `</div></div>`;
   } else {
-    html += `<div class="fatura-valor">${fmtMoeda(vMp)}</div>`;
+    html += `<div class="fatura-valor">${fmtMoeda(totalPagar)}</div>`;
   }
-  if (tipo !== 'paga' && extra > 0.004) {
-    html += `<div class="fatura-valor-extra">Total c/ multa e juros <strong>${fmtMoeda(total)}</strong></div>`;
+  if (tipo !== 'paga' && extraFusion > 0.004 && !temCupom) {
+    const bits = [`multa/juros ${fmtMoeda(extraFusion)}`];
+    if (descMkFusion > 0.004) bits.push(`descontos MK −${fmtMoeda(descMkFusion)}`);
+    html += `<div class="fatura-valor-extra"><span style="opacity:.92">Encargos e ajustes:</span> ${bits.join(' · ')}</div>`;
   }
   html += `<div class="fatura-valor-hint"><span>Ver Fatura</span><i class="fa-solid fa-angle-right" aria-hidden="true"></i></div>`;
   return html;
@@ -1551,10 +1711,11 @@ function faturaItemHtml(t, tipo) {
   const prazo = faturaListaMetaPrazo(t, tipo);
   const extras = faturaListaExtrasHtml(t, tipo);
   const valorCol = faturaListaValorCol(t, tipo);
-  const base = _faturaNum(t.valor);
-  const vMp = faturaValorMercadoPago(t, tipo === 'paga');
   const comCupomLemon =
-    tipo !== 'paga' && t.lemon_clube_desconto_resgatado && Math.abs(vMp - base) > 0.02;
+    tipo !== 'paga' &&
+    t.lemon_clube_desconto_resgatado &&
+    (t.lemon_clube_cupom_sobre_subtotal ||
+      (Number.isFinite(Number(t.lemon_clube_valor_desconto)) && Number(t.lemon_clube_valor_desconto) > 0.004));
   return `
     <div class="fatura-item${comCupomLemon ? ' fatura-item--cupom-lemon' : ''}" role="button" tabindex="0" onclick="abrirFatura('${t.uuid}', ${JSON.stringify(t).replace(/"/g, '&quot;')})">
       <div class="fatura-item-body">
@@ -1579,14 +1740,6 @@ function faturaTipocobLabel(v) {
   const k = String(v || '').toLowerCase();
   const map = { fat: 'Fatura', car: 'Carnê', con: 'Contrato', bol: 'Boleto', rec: 'Recibo', tit: 'Título' };
   return map[k] || (v ? String(v) : '');
-}
-
-/** Uma linha para o modal de fatura (mesma lógica do perfil). */
-function clienteEnderecoResumo(c) {
-  if (!c || typeof c !== 'object') return '';
-  const linha1 = [c.endereco, c.numero, c.complemento].filter(Boolean).map((x) => String(x).trim()).filter(Boolean).join(', ');
-  const linha2 = [c.bairro, c.cep].filter(Boolean).map((x) => String(x).trim()).filter(Boolean).join(' — ');
-  return [linha1, linha2].filter(Boolean).join(' · ');
 }
 
 function faturaModalVelocidadeBlockHtml() {
@@ -1625,10 +1778,29 @@ async function abrirFatura(uuid, dataInline) {
 
   const isPago    = t.status === 'pago' || !!t.valorpag;
   const isVencida = !isPago && t.datavenc && new Date(t.datavenc) < new Date();
-  const valorMpCobrar = faturaValorMercadoPago(t, isPago);
+  const totalPortalPagar = faturaValorTotalCobrancaPortal(t, isPago);
+  const lr = faturaLemonCupomReconciliado(t, isPago);
+  const valorMpBase = faturaValorMercadoPago(t, isPago);
   const lemonPct = t.lemon_clube_desconto_percent != null ? Number(t.lemon_clube_desconto_percent) : null;
-  const lemonDesc = t.lemon_clube_valor_desconto != null ? Number(t.lemon_clube_valor_desconto) : null;
+  const lemonDesc =
+    lr != null
+      ? lr.valorDesconto
+      : t.lemon_clube_valor_desconto != null
+        ? Number(t.lemon_clube_valor_desconto)
+        : null;
   const lemonLabel = t.lemon_clube_desconto_label ? String(t.lemon_clube_desconto_label) : '';
+
+  const principalMk = _faturaMkPrincipal(t);
+  const multaMk = _faturaMkMonetaryMax(t, 'valormulta');
+  const moraMk = _faturaMkMonetaryMax(t, 'valormora');
+  const descMk = _faturaMkMonetaryMax(t, 'valordesc');
+  const totalMkAberto =
+    !isPago ? Math.round(_faturaSubtotalAbertoSemCupomLista(t) * 100) / 100 : NaN;
+  const totalMkHeroMostrar =
+    !isPago &&
+    Number.isFinite(totalMkAberto) &&
+    totalMkAberto > 0.004 &&
+    !(lr != null && lemonPct != null && lemonPct > 0);
 
   const statusColor = isPago ? '#4ade80' : isVencida ? '#ef4444' : '#fb923c';
   const statusLabel = isPago ? 'Pago' : isVencida ? 'Vencida' : 'Em Aberto';
@@ -1654,10 +1826,15 @@ async function abrirFatura(uuid, dataInline) {
   let html = `
     <!-- Hero -->
     <div class="fatura-modal-hero" style="background:${heroBg};border-color:${statusColor}22">
-      <div class="fatura-modal-valor">${fmtMoeda(!isPago ? valorMpCobrar : t.valor)}</div>
+      <div class="fatura-modal-valor">${fmtMoeda(totalPortalPagar)}</div>
       ${
-        !isPago && t.lemon_clube_desconto_resgatado && lemonPct != null && Math.abs(valorMpCobrar - _faturaNum(t.valor)) > 0.02
-          ? `<div class="fatura-modal-subtipo" style="font-size:.78rem;opacity:.85">Valor da fatura ${fmtMoeda(t.valor)} · cupom Lemon Club ${lemonPct}%</div>`
+        totalMkHeroMostrar
+          ? `<div class="fatura-modal-subtipo" style="font-size:.76rem;opacity:.88;margin-top:4px">Total no MK-Auth (sistema / boleto): <strong>${fmtMoeda(totalMkAberto)}</strong></div>`
+          : ''
+      }
+      ${
+        !isPago && lr != null && lemonPct != null && lemonPct > 0
+          ? `<div class="fatura-modal-subtipo" style="font-size:.78rem;opacity:.85">Subtotal antes do Lemon Club ${fmtMoeda(lr.subAntesCupom)} · cupom ${lemonPct}% (sobre multa/juros e principal)</div>`
           : ''
       }
       <div class="fatura-modal-subtipo">${tipo}${t.referencia ? ' · ' + escHtml(String(t.referencia)) : ''}</div>
@@ -1680,8 +1857,8 @@ async function abrirFatura(uuid, dataInline) {
     if (lemonDesc != null && lemonDesc > 0.004) {
       html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-percent"></i> Desconto (resgate)</span><span class="modal-detail-val" style="color:#84cc16">− ${fmtMoeda(lemonDesc)}</span></div>`;
     }
-    if (!isPago && valorMpCobrar != null && Number.isFinite(valorMpCobrar)) {
-      html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-sack-dollar"></i> A pagar (portal)</span><span class="modal-detail-val" style="font-weight:700;color:#65a30d">${fmtMoeda(valorMpCobrar)}</span></div>`;
+    if (!isPago && valorMpBase != null && Number.isFinite(valorMpBase)) {
+      html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-sack-dollar"></i> A pagar (portal)</span><span class="modal-detail-val" style="font-weight:700;color:#65a30d">${fmtMoeda(totalPortalPagar)}</span></div>`;
     }
   }
 
@@ -1709,6 +1886,10 @@ async function abrirFatura(uuid, dataInline) {
   // Observação (plano / descrição)
   if (t.obs) {
     html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-circle-info"></i> Descrição</span><span class="modal-detail-val" style="font-size:.82rem;color:var(--text-muted)">${escHtml(String(t.obs))}</span></div>`;
+  }
+
+  if (principalMk > 0.004) {
+    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-coins"></i> Valor principal (MK)</span><span class="modal-detail-val">${fmtMoeda(principalMk)}</span></div>`;
   }
 
   const pctM = _faturaNum(t.percmulta);
@@ -1739,34 +1920,25 @@ async function abrirFatura(uuid, dataInline) {
     html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-credit-card"></i> Forma Pag.</span><span class="modal-detail-val">${escHtml(String(t.formapag))}</span></div>`;
   }
 
-  // Desconto
-  if (t.valordesc && parseFloat(t.valordesc) > 0) {
-    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-percent"></i> Desconto</span><span class="modal-detail-val" style="color:#4ade80">- ${fmtMoeda(t.valordesc)}</span></div>`;
+  // Desconto / multa / juros — lê também em dados aninhados do MK
+  if (descMk > 0.004) {
+    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-percent"></i> Desconto (MK)</span><span class="modal-detail-val" style="color:#4ade80">− ${fmtMoeda(descMk)}</span></div>`;
   }
 
-  // Multa / juros
-  if (t.valormulta && parseFloat(t.valormulta) > 0) {
-    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-triangle-exclamation"></i> Multa</span><span class="modal-detail-val" style="color:#ef4444">+ ${fmtMoeda(t.valormulta)}</span></div>`;
+  if (multaMk > 0.004) {
+    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-triangle-exclamation"></i> Multa</span><span class="modal-detail-val" style="color:#ef4444">+ ${fmtMoeda(multaMk)}</span></div>`;
   }
-  if (t.valormora && parseFloat(t.valormora) > 0) {
-    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-clock"></i> Juros mora</span><span class="modal-detail-val" style="color:#ef4444">+ ${fmtMoeda(t.valormora)}</span></div>`;
+  if (moraMk > 0.004) {
+    html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-clock"></i> Juros mora</span><span class="modal-detail-val" style="color:#ef4444">+ ${fmtMoeda(moraMk)}</span></div>`;
   }
 
   if (!isPago) {
-    const vb = _faturaNum(t.valor);
-    const vm = _faturaNum(t.valormulta);
-    const vj = _faturaNum(t.valormora);
-    const vd = _faturaNum(t.valordesc);
-    const tot = vb + vm + vj - vd;
-    if (vm > 0.004 || vj > 0.004 || vd > 0.004) {
-      html += `<div class="modal-detail-row" style="border-top:1px dashed var(--glass-border);margin-top:6px;padding-top:10px"><span class="modal-detail-label" style="font-weight:700"><i class="fa-solid fa-sack-dollar"></i> Total estimado</span><span class="modal-detail-val" style="font-weight:800;color:var(--lemon-dark)">${fmtMoeda(tot)}</span></div>`;
-    }
-  }
-
-  {
-    const endTxt = clienteEnderecoResumo(clienteData);
-    if (endTxt) {
-      html += `<div class="modal-detail-row"><span class="modal-detail-label"><i class="fa-solid fa-location-dot"></i> Endereço</span><span class="modal-detail-val" style="font-size:.82rem;color:var(--text-muted);text-align:right">${escHtml(endTxt)}</span></div>`;
+    const vm = multaMk;
+    const vj = moraMk;
+    const vd = descMk;
+    const totCupom = faturaValorTotalCobrancaPortal(t, false);
+    if (vm > 0.004 || vj > 0.004 || vd > 0.004 || t.lemon_clube_desconto_resgatado) {
+      html += `<div class="modal-detail-row" style="border-top:1px dashed var(--glass-border);margin-top:6px;padding-top:10px"><span class="modal-detail-label" style="font-weight:700"><i class="fa-solid fa-sack-dollar"></i> Total estimado</span><span class="modal-detail-val" style="font-weight:800;color:var(--lemon-dark)">${fmtMoeda(totCupom)}</span></div>`;
     }
   }
 
@@ -1807,12 +1979,12 @@ async function abrirFatura(uuid, dataInline) {
     html += `
       <div id="mp-pix-area" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
         <button type="button" id="btn-mp-pix" class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#009ee3,#007ab8);gap:10px;font-size:.9rem;padding:14px;color:#fff;border:none;box-shadow:0 4px 14px rgba(0,158,227,.35)"
-          onclick="gerarPixMP('${uuid}', ${valorMpCobrar}, '${escDesc}')">
+          onclick="void pagarPixFaturaComValorAtualizado('${uuid}', '${escDesc}')">
           <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.1/mercadopago/logo__large@2x.png" alt="Mercado Pago" style="height:22px;width:auto;object-fit:contain;display:block" loading="lazy">
           Pagar via PIX
         </button>
         <button type="button" id="btn-mp-sub" class="btn btn-mp-fatura-cartao"
-          onclick="void abrirFormAssinaturaMP('${uuid}', ${valorMpCobrar}, '${escDesc}')">
+          onclick="void abrirCartaoFaturaComValorAtualizado('${uuid}', '${escDesc}')">
           <i class="fa-solid fa-credit-card"></i>
           Pagar fatura no cartão
         </button>
@@ -1825,7 +1997,7 @@ async function abrirFatura(uuid, dataInline) {
   content.innerHTML = html;
 }
 
-// ===== MERCADO PAGO (PIX + assinatura) =====
+// ===== MERCADO PAGO (PIX + cartão) =====
 
 const _mpLogoImg = '<img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.19.1/mercadopago/logo__large@2x.png" alt="MP" style="height:22px;width:auto;object-fit:contain;display:block" loading="lazy">';
 
@@ -2006,7 +2178,7 @@ async function _mpCriarCardToken(publicKey, dados) {
   return j.id;
 }
 
-/** Aviso sandbox vs produção + chaves MP alinhadas (carteira e assinatura na fatura). */
+/** Aviso sandbox vs produção + chaves MP alinhadas (carteira e pagamento na fatura). */
 function _mpPagamentoAvisoHtml(cfg) {
   if (!cfg || typeof cfg !== 'object') return '';
   if (cfg.chavesAlinhadas === false) {
@@ -2140,14 +2312,14 @@ async function abrirFormAssinaturaMP(tituloUuid, valor, descricao) {
 
   const novoBlock = `<div id="mp-sub-novo-block" style="display:${saved.length ? 'none' : 'block'}">
       <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:10px;line-height:1.45">Cobrança imediata do valor desta fatura no cartão (não é só verificação).</div>
-      <input type="text" id="mp-sub-nome" placeholder="Nome impresso no cartão" autocomplete="cc-name" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-      <input type="text" id="mp-sub-num" placeholder="Número do cartão" inputmode="numeric" autocomplete="cc-number" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <input type="text" id="mp-sub-mes" placeholder="MM" maxlength="2" inputmode="numeric" autocomplete="cc-exp-month" style="padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-        <input type="text" id="mp-sub-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" autocomplete="cc-exp-year" style="padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-        <input type="text" id="mp-sub-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" style="padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
+      <input type="text" id="mp-sub-nome" placeholder="Nome impresso no cartão" autocomplete="cc-name" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;box-sizing:border-box;-webkit-appearance:none;appearance:none" />
+      <input type="text" id="mp-sub-num" placeholder="Número do cartão" inputmode="numeric" autocomplete="cc-number" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;box-sizing:border-box;-webkit-appearance:none;appearance:none" />
+      <div class="mp-sub-expiry-row" style="${_MP_SUB_EXPIRY_ROW_STYLE}">
+        <input type="text" id="mp-sub-mes" placeholder="MM" maxlength="2" inputmode="numeric" autocomplete="cc-exp-month" style="${_MP_SUB_FIELD_STYLE}" />
+        <input type="text" id="mp-sub-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" autocomplete="cc-exp-year" style="${_MP_SUB_FIELD_STYLE}" />
+        <input type="text" id="mp-sub-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" style="${_MP_SUB_FIELD_STYLE}" />
       </div>
-      <input type="text" id="mp-sub-cpf" placeholder="CPF do titular" value="${cpfCliente}" inputmode="numeric" style="width:100%;margin-bottom:12px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
+      <input type="text" id="mp-sub-cpf" placeholder="CPF do titular" value="${cpfCliente}" inputmode="numeric" style="width:100%;margin-bottom:12px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;box-sizing:border-box;-webkit-appearance:none;appearance:none" />
       ${saved.length ? `<button type="button" id="mp-sub-show-saved" style="width:100%;background:transparent;border:none;color:var(--lemon-dark);font-size:.78rem;font-weight:600;cursor:pointer;margin-bottom:10px;text-decoration:underline">Voltar ao cartão da carteira</button>` : ''}
     </div>`;
 
@@ -2205,7 +2377,7 @@ async function abrirFormAssinaturaMP(tituloUuid, valor, descricao) {
 
 const _mpBtnCartaoLabel = 'Pagar com cartão';
 
-/** Após POST /mp/assinatura com cartão: baixa no MK (polling se pendente). */
+/** Após POST /pagamento/fatura/cartao: baixa no MK (polling se pendente). */
 async function _mpFinalizarCartaoPortal(resposta, tituloUuid, valor, cbtn) {
   const { mpId, status, pollBaixa, valor: vServ } = resposta;
   const valorNum = vServ != null ? parseFloat(vServ) : parseFloat(valor);
@@ -2324,7 +2496,7 @@ async function confirmarAssinaturaComToken() {
       }
       const cardToken = tokenOut?.id || tokenOut?.token;
       if (!cardToken) throw new Error('Não foi possível gerar o token do cartão salvo.');
-      const res = await request('POST', `${API}/mp/assinatura`, {
+      const res = await request('POST', MP_API_FATURA_CARTAO, {
         tituloUuid,
         valor,
         descricao,
@@ -2358,7 +2530,7 @@ async function confirmarAssinaturaComToken() {
     const pub = publicKey || (await request('GET', `${API}/pagamento/config`)).publicKey;
     if (!pub) throw new Error('Public Key do Mercado Pago não configurada no servidor.');
     const cardToken = await _mpCriarCardToken(pub, { nome, numero, mes, ano, cvv, cpf });
-    const res = await request('POST', `${API}/mp/assinatura`, { tituloUuid, valor, descricao, cardToken });
+    const res = await request('POST', MP_API_FATURA_CARTAO, { tituloUuid, valor, descricao, cardToken });
     if (res.ok && (res.modo === 'pagamento_cartao' || res.modo === 'pagamento_cartao_pendente')) {
       await _mpFinalizarCartaoPortal(res, tituloUuid, valor, cbtn);
       return;
@@ -2370,11 +2542,40 @@ async function confirmarAssinaturaComToken() {
   }
 }
 
-/** Fallback: checkout hospedado (redireciona ao MP) — só se precisar */
-async function assinaturaMercadoPagoHosted(tituloUuid, valor, descricao) {
-  const res = await request('POST', `${API}/mp/assinatura`, { tituloUuid, valor, descricao, hostedCheckout: true });
-  if (res.initPoint) window.location.href = res.initPoint;
-  else throw new Error('Link não retornado');
+async function pagarPixFaturaComValorAtualizado(tituloUuid, descricao) {
+  const uuid = String(tituloUuid || '').trim();
+  if (!uuid) return;
+  try {
+    const t = await request('GET', `${API}/faturas/${encodeURIComponent(uuid)}`);
+    const isPago = t.status === 'pago' || !!t.valorpag;
+    if (isPago) {
+      alert('Esta fatura já está paga.');
+      return;
+    }
+    const valor = faturaValorTotalCobrancaPortal(t, false);
+    if (!Number.isFinite(valor) || valor < 0) throw new Error('Valor da fatura indisponível. Atualize a lista.');
+    await gerarPixMP(uuid, valor, descricao);
+  } catch (e) {
+    alert(e.message || 'Não foi possível iniciar o pagamento.');
+  }
+}
+
+async function abrirCartaoFaturaComValorAtualizado(tituloUuid, descricao) {
+  const uuid = String(tituloUuid || '').trim();
+  if (!uuid) return;
+  try {
+    const t = await request('GET', `${API}/faturas/${encodeURIComponent(uuid)}`);
+    const isPago = t.status === 'pago' || !!t.valorpag;
+    if (isPago) {
+      alert('Esta fatura já está paga.');
+      return;
+    }
+    const valor = faturaValorTotalCobrancaPortal(t, false);
+    if (!Number.isFinite(valor) || valor < 0) throw new Error('Valor da fatura indisponível. Atualize a lista.');
+    await abrirFormAssinaturaMP(uuid, valor, descricao);
+  } catch (e) {
+    alert(e.message || 'Não foi possível abrir o pagamento.');
+  }
 }
 
 // ===== CHAMADOS =====
@@ -2858,13 +3059,22 @@ function _abrirModalCopia(texto) {
   try {
     const sess = await request('GET', `${API}/session`);
     if (sess.logado) {
+      if (typeof window.__lemonSplashShow === 'function') window.__lemonSplashShow();
       document.getElementById('topbar-nome').textContent = sess.nome || '';
       document.getElementById('page-landing').classList.remove('active');
       document.getElementById('page-landing').classList.add('hidden');
       document.getElementById('page-portal').classList.remove('hidden');
-      navTo('dashboard');
+      await navTo('dashboard');
+      const open = new URLSearchParams(window.location.search).get('open');
+      if (open === 'faturas') navTo('faturas');
+      else if (open === 'notificacoes') navTo('notificacoes');
+      if (typeof window.__lemonSplashHide === 'function') window.__lemonSplashHide();
+    } else {
+      if (typeof window.__lemonSplashScheduleGuestHide === 'function') window.__lemonSplashScheduleGuestHide();
     }
-  } catch (_) {}
+  } catch (_) {
+    if (typeof window.__lemonSplashScheduleGuestHide === 'function') window.__lemonSplashScheduleGuestHide();
+  }
 })();
 
 // ===== CONEXÃO / MIKROTIK =====

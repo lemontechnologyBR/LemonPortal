@@ -2,6 +2,7 @@
  * Rotas e job de pagamentos Mercado Pago (PIX, cartão, webhook, baixa).
  */
 const express = require('express');
+const crypto  = require('crypto');
 const axios = require('axios');
 const config = require('../lib/config');
 const { sqliteDb } = require('../lib/database');
@@ -14,11 +15,13 @@ const {
   reconciliarPendenteDescontoClube,
   garantirUuidTituloPayload,
 } = require('../lib/clube-fatura-desconto');
+const { aplicarJurosAtrasoTitulo } = require('../lib/juros-atraso-fatura');
 const { mpWalletGetOrCreateCustomer } = require('../lib/mercadopago-wallet');
 
 const {
   MP_TOKEN,
   MP_PUBKEY,
+  MP_WEBHOOK_SECRET,
   MP_BASE,
   MK_URL,
   mpChavesMercadoPagoAlinhadas,
@@ -29,9 +32,64 @@ const {
   MP_JOB_MAX_ATTEMPTS,
 } = config;
 
+function tituloPayloadParaCupomPortal(tituloRaw, uuidTitulo) {
+  const payload = garantirUuidTituloPayload(tituloRaw && typeof tituloRaw === 'object' ? { ...tituloRaw } : {}, uuidTitulo);
+  return aplicarJurosAtrasoTitulo(payload);
+}
+
 const MP_UUID_FATURA = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MK_TITULO_UUID_LOOSE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MK_TITULO_UUID_HEX32 = /^[0-9a-f]{32}$/i;
+
+/**
+ * Valida a assinatura HMAC-SHA256 enviada pelo Mercado Pago no header x-signature.
+ * Retorna true se válida, false se inválida.
+ * Se MP_WEBHOOK_SECRET não estiver configurado, loga aviso e aceita (modo legado).
+ *
+ * Documentação: https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+ */
+function validarAssinaturaWebhookMP(req) {
+  if (!MP_WEBHOOK_SECRET) {
+    console.warn('[MP Webhook] ⚠️  MP_WEBHOOK_SECRET não configurado — assinatura não validada. Configure no .env e no Painel MP.');
+    return true;
+  }
+
+  const xSignature = String(req.headers['x-signature'] || '').trim();
+  const xRequestId = String(req.headers['x-request-id'] || '').trim();
+  const paymentId  = req.body?.data?.id;
+
+  if (!xSignature) {
+    console.warn('[MP Webhook] Header x-signature ausente — requisição rejeitada.');
+    return false;
+  }
+
+  // Extrai ts= e v1= do header "ts=<timestamp>,v1=<hmac>"
+  const partes = {};
+  for (const seg of xSignature.split(',')) {
+    const eq = seg.indexOf('=');
+    if (eq > 0) partes[seg.slice(0, eq).trim()] = seg.slice(eq + 1).trim();
+  }
+  const ts = partes.ts;
+  const v1 = partes.v1;
+
+  if (!ts || !v1) {
+    console.warn('[MP Webhook] Header x-signature mal-formado.');
+    return false;
+  }
+
+  // Constrói o manifest conforme docs do MP
+  const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts}`;
+  const esperado = crypto.createHmac('sha256', MP_WEBHOOK_SECRET).update(manifest).digest('hex');
+
+  try {
+    const bufEsperado = Buffer.from(esperado, 'hex');
+    const bufRecebido = Buffer.from(v1, 'hex');
+    if (bufEsperado.length !== bufRecebido.length) return false;
+    return crypto.timingSafeEqual(bufEsperado, bufRecebido);
+  } catch {
+    return false;
+  }
+}
 
 function mpRefPareceUuidTituloMk(ref) {
   const s = String(ref || '').trim();
@@ -146,8 +204,9 @@ function mpLiberarReservaBaixa(mpId) {
   } catch (_) {}
 }
 
-async function portalMpAssinatura(req, res) {
-  const { tituloUuid, valor, descricao, cardToken, card_token_id, hostedCheckout, mpCustomerId } = req.body;
+/** Fatura no Mercado Pago — pagamento único no cartão (POST /v1/payments + cardToken). */
+async function portalMpPagamentoFatura(req, res) {
+  const { tituloUuid, valor, descricao, cardToken, card_token_id, mpCustomerId } = req.body;
   const cli = req.session.cliente;
   if (!tituloUuid || !valor) return res.status(400).json({ error: 'Dados obrigatórios: tituloUuid, valor' });
 
@@ -159,12 +218,9 @@ async function portalMpAssinatura(req, res) {
   }
 
   const cardTok = (cardToken || card_token_id || '').trim();
-  const usarHosted = hostedCheckout === true;
-
-  if (!cardTok && !usarHosted) {
+  if (!cardTok) {
     return res.status(400).json({
-      error:
-        'Envie card_token_id (token do cartão gerado no navegador com MercadoPago.js e a public key) ou hostedCheckout:true para link externo.',
+      error: 'Envie cardToken (token do cartão gerado no navegador com MercadoPago.js).',
     });
   }
 
@@ -175,205 +231,166 @@ async function portalMpAssinatura(req, res) {
     });
     const cpfRaw = (mkCli.data.cpf_cnpj || '').replace(/\D/g, '');
     if (!cpfRaw || cpfRaw.length < 11) {
-      return res.status(400).json({ error: 'CPF não encontrado no cadastro. Atualize seus dados para usar assinatura no cartão.' });
+      return res.status(400).json({
+        error: 'CPF não encontrado no cadastro. Atualize seus dados para pagar com cartão.',
+      });
     }
-    const email = mkCli.data.email || `${cli.login}@cliente.lemon`;
 
     const origin = mpPortalOrigin();
-    let backUrl = String(process.env.MP_BACK_URL || `${origin}/?faturas=1&mp_sub=ok`)
-      .trim()
-      .replace(/^['"]|['"]$/g, '');
-    if (!backUrl || /^(undefined|null)$/i.test(backUrl)) {
-      backUrl = `${origin}/?faturas=1&mp_sub=ok`;
-    }
     const notificationUrl = `${origin}/portal/pagamento/webhook`;
 
     const tokenStr = String(MP_TOKEN || '').trim();
     const isTestToken = tokenStr.startsWith('TEST-');
 
-    if (cardTok) {
-      const tituloMk = await mkTituloPertenceAoCliente(tituloUuid, cli.login, token);
-      if (!tituloMk) {
-        return res.status(400).json({
-          error: 'Fatura não encontrada no MK-Auth ou não pertence à sua conta.',
-        });
-      }
-      const valorTitulo = parseValorMkAuth(tituloMk.valor ?? tituloMk.dados?.valor);
-      const valorPedido = Number(parseFloat(valor).toFixed(2));
-      try {
-        if (cpfRaw.length >= 11) await reconciliarPendenteDescontoClube(cli.login, cpfRaw, mkGet);
-      } catch (_) {}
-      const cfd = loadClubFaturaDesconto(cli.login);
-      const permitidos = valoresMpPermitidosParaTitulo(valorTitulo, cfd.pendente, tituloUuid);
-      if (
-        permitidos.length > 0 &&
-        !Number.isNaN(valorTitulo) &&
-        !Number.isNaN(valorPedido) &&
-        !valorPedidoConferePermitidos(valorPedido, permitidos)
-      ) {
-        return res.status(400).json({ error: 'Valor enviado não confere com o valor da fatura. Atualize a lista de faturas.' });
-      }
-      if (
-        !isTestToken &&
-        /^http:\/\//i.test(notificationUrl) &&
-        !/localhost|127\.0\.0\.1/i.test(notificationUrl)
-      ) {
-        return res.status(400).json({
-          error:
-            'Mercado Pago (produção) exige webhook em HTTPS. Defina PORTAL_URL com https:// no .env e reinicie o servidor.',
-        });
-      }
-      const uuidRef = String(tituloUuid).trim();
-      const mpCust = String(mpCustomerId || '').trim();
-      const customerIdDoMk = await mpWalletGetOrCreateCustomer(cli.login, mkCli.data, cli.nome);
-
-      let payerPayload;
-      if (mpCust) {
-        const temCartao = sqliteDb
-          .prepare(
-            'SELECT 1 FROM wallet_cards WHERE login = ? AND mp_customer_id = ? AND mp_card_id IS NOT NULL LIMIT 1'
-          )
-          .get(cli.login, mpCust);
-        if (!temCartao) {
-          return res.status(400).json({
-            error:
-              'Cliente do cartão não confere com sua carteira. Remova o cartão na carteira e cadastre de novo no Mercado Pago.',
-          });
-        }
-        payerPayload = { type: 'customer', id: mpCust };
-      } else {
-        payerPayload = { type: 'customer', id: customerIdDoMk };
-      }
-      const payPayload = {
-        transaction_amount: Number(parseFloat(valor).toFixed(2)),
-        token: cardTok,
-        description: (descricao || `Mensalidade Internet — ${cli.login}`).slice(0, 230),
-        installments: 1,
-        payer: payerPayload,
-        external_reference: uuidRef,
-        notification_url: notificationUrl,
-        binary_mode: true,
-        metadata: { portal_login: cli.login },
-      };
-
-      const mpPay = await axios.post(`${MP_BASE}/v1/payments`, payPayload, {
-        headers: {
-          Authorization: `Bearer ${MP_TOKEN}`,
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': `card-${cli.login}-${uuidRef}-${Date.now()}`,
-        },
-      });
-      const payData = mpPay.data;
-
-      if (payData.status === 'approved') {
-        return res.json({
-          ok: true,
-          modo: 'pagamento_cartao',
-          mpId: payData.id,
-          status: payData.status,
-          tituloUuid: uuidRef,
-          valor: payData.transaction_amount ?? parseFloat(valor),
-        });
-      }
-
-      if (
-        payData.status === 'pending' ||
-        payData.status === 'in_process' ||
-        payData.status === 'authorized'
-      ) {
-        try {
-          sqliteDb
-            .prepare(`
-            INSERT OR IGNORE INTO pending_payments (mp_id, login, titulo_uuid, valor, status)
-            VALUES (?, ?, ?, ?, 'pending')
-          `)
-            .run(String(payData.id), cli.login, uuidRef, parseFloat(valor));
-        } catch (dbErr) {
-          console.warn('[MP Cartão] Erro ao salvar pendente:', dbErr.message);
-        }
-        return res.json({
-          ok: true,
-          modo: 'pagamento_cartao_pendente',
-          mpId: payData.id,
-          status: payData.status,
-          tituloUuid: uuidRef,
-          valor: payData.transaction_amount ?? parseFloat(valor),
-          pollBaixa: true,
-        });
-      }
-
-      const detail = payData.status_detail || payData.message || 'Pagamento recusado';
+    let tituloMk = await mkTituloPertenceAoCliente(tituloUuid, cli.login, token);
+    if (!tituloMk) {
       return res.status(400).json({
-        error: typeof detail === 'string' ? detail : JSON.stringify(detail),
-        mpId: payData.id,
-        status: payData.status,
+        error: 'Fatura não encontrada no MK-Auth ou não pertence à sua conta.',
       });
     }
-
-    const extRef = `LEMONSUB|${cli.login}|${cpfRaw}`;
-    const startAt = new Date(Date.now() + 120_000).toISOString();
-    const endAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString();
-
-    if (!isTestToken && /^http:\/\//i.test(backUrl) && !/localhost|127\.0\.0\.1/i.test(backUrl)) {
+    tituloMk = aplicarJurosAtrasoTitulo({ ...tituloMk });
+    const valorTitulo = parseValorMkAuth(tituloMk.valor ?? tituloMk.dados?.valor);
+    const valorPedido = Number(parseFloat(valor).toFixed(2));
+    try {
+      if (cpfRaw.length >= 11) await reconciliarPendenteDescontoClube(cli.login, cpfRaw, mkGet);
+    } catch (_) {}
+    const cfd = loadClubFaturaDesconto(cli.login);
+    const permitidos = valoresMpPermitidosParaTitulo(tituloMk, cfd.pendente, tituloUuid);
+    if (
+      permitidos.length > 0 &&
+      !Number.isNaN(valorTitulo) &&
+      !Number.isNaN(valorPedido) &&
+      !valorPedidoConferePermitidos(valorPedido, permitidos)
+    ) {
+      return res.status(400).json({ error: 'Valor enviado não confere com o valor da fatura. Atualize a lista de faturas.' });
+    }
+    if (
+      !isTestToken &&
+      /^http:\/\//i.test(notificationUrl) &&
+      !/localhost|127\.0\.0\.1/i.test(notificationUrl)
+    ) {
       return res.status(400).json({
         error:
-          'Mercado Pago (produção) exige back_url em HTTPS. Defina PORTAL_URL ou MP_BACK_URL com https:// no .env e reinicie o servidor.',
+          'Mercado Pago (produção) exige webhook em HTTPS. Defina PORTAL_URL com https:// no .env e reinicie o servidor.',
       });
     }
+    const uuidRef = String(tituloUuid).trim();
+    const mpCust = String(mpCustomerId || '').trim();
+    const customerIdDoMk = await mpWalletGetOrCreateCustomer(cli.login, mkCli.data, cli.nome);
 
-    const payload = {
-      back_url: backUrl,
-      reason: (descricao || `Mensalidade Internet — ${cli.login}`).slice(0, 230),
-      auto_recurring: {
-        frequency: 1,
-        frequency_type: 'months',
-        start_date: startAt,
-        end_date: endAt,
-        transaction_amount: parseFloat(valor),
-        currency_id: 'BRL',
-      },
-      payer_email: email,
-      external_reference: extRef,
+    let payerPayload;
+    let savedPaymentMethodId = null;
+    const reqCardId = (req.body.mpCardId || '').trim();
+    if (mpCust) {
+      const cartaoQuery = reqCardId
+        ? 'SELECT payment_method_id FROM wallet_cards WHERE login = ? AND mp_customer_id = ? AND mp_card_id = ?'
+        : 'SELECT payment_method_id FROM wallet_cards WHERE login = ? AND mp_customer_id = ? AND mp_card_id IS NOT NULL LIMIT 1';
+      const cartaoParams = reqCardId ? [cli.login, mpCust, reqCardId] : [cli.login, mpCust];
+      const temCartao = sqliteDb.prepare(cartaoQuery).get(...cartaoParams);
+      if (!temCartao) {
+        return res.status(400).json({
+          error:
+            'Cliente do cartão não confere com sua carteira. Remova o cartão na carteira e cadastre de novo no Mercado Pago.',
+        });
+      }
+      savedPaymentMethodId = temCartao.payment_method_id || null;
+      payerPayload = { type: 'customer', id: mpCust };
+    } else {
+      payerPayload = { type: 'customer', id: customerIdDoMk };
+    }
+    const payPayload = {
+      transaction_amount: Number(parseFloat(valor).toFixed(2)),
+      token: cardTok,
+      description: (descricao || `Mensalidade Internet — ${cli.login}`).slice(0, 230),
+      installments: 1,
+      payer: payerPayload,
+      external_reference: uuidRef,
       notification_url: notificationUrl,
-      status: 'pending',
+      binary_mode: true,
+      metadata: { portal_login: cli.login },
     };
+    if (savedPaymentMethodId) {
+      payPayload.payment_method_id = savedPaymentMethodId;
+    }
 
-    const mpRes = await axios.post(`${MP_BASE}/preapproval`, payload, {
+    const mpPay = await axios.post(`${MP_BASE}/v1/payments`, payPayload, {
       headers: {
         Authorization: `Bearer ${MP_TOKEN}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': `sub-${cli.login}-${tituloUuid}-${Date.now()}`,
+        'X-Idempotency-Key': `card-${cli.login}-${uuidRef}-${Date.now()}`,
       },
     });
-    const data = mpRes.data;
+    const payData = mpPay.data;
 
-    if (!data.init_point) {
-      console.error('[MP Assinatura] Resposta sem init_point:', data);
-      return res.status(500).json({ error: 'Mercado Pago não retornou link de checkout.' });
+    if (payData.status === 'approved') {
+      return res.json({
+        ok: true,
+        modo: 'pagamento_cartao',
+        mpId: payData.id,
+        status: payData.status,
+        tituloUuid: uuidRef,
+        valor: payData.transaction_amount ?? parseFloat(valor),
+      });
     }
 
-    const subStatus = data.status || 'pending';
-    try {
-      sqliteDb
-        .prepare(`
-        INSERT INTO mp_subscriptions (preapproval_id, login, cpf_limpo, valor_mensal, titulo_uuid_ref, status, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-      `)
-        .run(String(data.id), cli.login, cpfRaw, parseFloat(valor), tituloUuid, subStatus);
-    } catch (dbErr) {
-      console.warn('[MP Assinatura] Erro ao salvar registro:', dbErr.message);
+    if (
+      payData.status === 'pending' ||
+      payData.status === 'in_process' ||
+      payData.status === 'authorized'
+    ) {
+      try {
+        sqliteDb
+          .prepare(`
+            INSERT OR IGNORE INTO pending_payments (mp_id, login, titulo_uuid, valor, status)
+            VALUES (?, ?, ?, ?, 'pending')
+          `)
+          .run(String(payData.id), cli.login, uuidRef, parseFloat(valor));
+      } catch (dbErr) {
+        console.warn('[MP Cartão] Erro ao salvar pendente:', dbErr.message);
+      }
+      return res.json({
+        ok: true,
+        modo: 'pagamento_cartao_pendente',
+        mpId: payData.id,
+        status: payData.status,
+        tituloUuid: uuidRef,
+        valor: payData.transaction_amount ?? parseFloat(valor),
+        pollBaixa: true,
+      });
     }
 
-    res.json({
-      ok: true,
-      preapprovalId: data.id,
-      status: subStatus,
-      initPoint: data.init_point || null,
-      modo: 'hosted',
+    const MP_STATUS_DETAIL_PT = {
+      cc_rejected_bad_filled_card_number: 'Número do cartão inválido. Verifique e tente novamente.',
+      cc_rejected_bad_filled_date:        'Data de validade incorreta. Verifique o mês e ano.',
+      cc_rejected_bad_filled_other:       'Dados do cartão inválidos. Confira todos os campos.',
+      cc_rejected_bad_filled_security_code:'CVV incorreto. Verifique o código de segurança.',
+      cc_rejected_blacklist:              'Cartão bloqueado. Entre em contato com o banco emissor.',
+      cc_rejected_call_for_authorize:     'Pagamento requer autorização. Ligue para o banco emissor.',
+      cc_rejected_card_disabled:          'Cartão desativado. Ative-o pelo seu banco ou use outro cartão.',
+      cc_rejected_card_error:             'Não foi possível processar o cartão. Tente novamente.',
+      cc_rejected_duplicated_payment:     'Pagamento duplicado detectado. A operação anterior ainda está em processamento.',
+      cc_rejected_high_risk:              'Pagamento recusado por segurança. Tente outro cartão ou use o PIX.',
+      cc_rejected_insufficient_amount:    'Saldo insuficiente no cartão. Use outro cartão ou pague via PIX.',
+      cc_rejected_invalid_installments:   'Parcelamento não disponível para este cartão.',
+      cc_rejected_max_attempts:           'Número máximo de tentativas atingido. Aguarde ou use outro cartão.',
+      cc_rejected_other_reason:           'Cartão recusado. Contate o banco emissor ou use outro cartão.',
+      rejected_by_bank:                   'Recusado pelo banco. Entre em contato com o banco emissor.',
+      rejected_insufficient_data:         'Dados insuficientes. Verifique todos os campos e tente novamente.',
+      pending_contingency:                'Pagamento em análise. Aguarde a confirmação.',
+      pending_review_manual:              'Pagamento em análise manual. Você será notificado.',
+    };
+    const rawDetail = payData.status_detail || payData.message || 'cc_rejected_other_reason';
+    const detailKey = typeof rawDetail === 'string' ? rawDetail.trim() : '';
+    const detailPt  = MP_STATUS_DETAIL_PT[detailKey] || rawDetail || 'Pagamento recusado pelo banco.';
+    return res.status(400).json({
+      error: typeof detailPt === 'string' ? detailPt : JSON.stringify(detailPt),
+      mpId: payData.id,
+      status: payData.status,
+      status_detail: detailKey,
     });
   } catch (e) {
     const err = e.response?.data;
-    console.error('[MP Assinatura]', err || e.message);
+    console.error('[MP Fatura]', err || e.message);
     let msg = err?.message || err?.error || err?.cause?.[0]?.description || e.message;
     if (typeof msg !== 'string') msg = JSON.stringify(msg);
     if (/back_url/i.test(msg)) {
@@ -392,8 +409,7 @@ async function portalMpAssinatura(req, res) {
 }
 
 function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notificarFaturaPagaComPontos }) {
-  app.post('/portal/pagamento/assinatura', requireAuth, portalMpAssinatura);
-  app.post('/portal/mp/assinatura', requireAuth, portalMpAssinatura);
+  app.post('/portal/pagamento/fatura/cartao', requireAuth, portalMpPagamentoFatura);
 
   app.post('/portal/pagamento/pix', requireAuth, async (req, res) => {
     const { tituloUuid, valor, descricao } = req.body;
@@ -402,10 +418,11 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
 
     try {
       const token = await getJWT();
-      const tituloMk = await mkTituloPertenceAoCliente(tituloUuid, cli.login, token);
-      if (!tituloMk) {
+      const rawT = await mkTituloPertenceAoCliente(tituloUuid, cli.login, token);
+      if (!rawT) {
         return res.status(400).json({ error: 'Fatura não encontrada no MK-Auth ou não pertence à sua conta.' });
       }
+      const tituloMk = aplicarJurosAtrasoTitulo({ ...rawT });
       const mkCli = await axios.get(`${MK_URL}/cliente/show/${cli.login}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -417,7 +434,7 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
       const valorTitulo = parseValorMkAuth(tituloMk.valor ?? tituloMk.dados?.valor);
       const valorPedido = Number(parseFloat(valor).toFixed(2));
       const cfd = loadClubFaturaDesconto(cli.login);
-      const permitidos = valoresMpPermitidosParaTitulo(valorTitulo, cfd.pendente, tituloUuid);
+      const permitidos = valoresMpPermitidosParaTitulo(tituloMk, cfd.pendente, tituloUuid);
       if (
         permitidos.length > 0 &&
         !Number.isNaN(valorTitulo) &&
@@ -426,11 +443,14 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
       ) {
         return res.status(400).json({ error: 'Valor enviado não confere com o valor da fatura. Atualize a lista de faturas.' });
       }
-      const email = mkCli.data.email || `${cli.login}@cliente.lemon`;
+      const emailRaw = String(mkCli.data.email || '').trim();
+      // O MP valida formato e domínio do e-mail; evita TLDs inexistentes como .lemon
+      const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailRaw) ? emailRaw : `cliente.${cli.login}@lemon.com.br`;
       const nomes = (mkCli.data.nome || cli.nome || 'Cliente').split(' ');
       const firstName = nomes[0];
       const lastName = nomes.slice(1).join(' ') || nomes[0];
 
+      // MP exige mínimo ~30 min de expiração para PIX em produção
       const expiraEm = new Date(Date.now() + MP_PIX_EXPIRATION_MIN * 60_000).toISOString();
       const payload = {
         transaction_amount: parseFloat(valor),
@@ -440,7 +460,7 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
         date_of_expiration: expiraEm,
         notification_url: `${mpPortalOrigin()}/portal/pagamento/webhook`,
         payer: {
-          email,
+          email: emailValido,
           first_name: firstName,
           last_name: lastName,
           identification: cpf ? { type: 'CPF', number: cpf } : undefined,
@@ -482,7 +502,14 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
     } catch (e) {
       const err = e.response?.data;
       console.error('[MP PIX]', err || e.message);
-      res.status(500).json({ error: err?.message || e.message });
+      // Extrai a causa detalhada que o MP inclui em err.cause[]
+      let msg = err?.message || e.message;
+      if (Array.isArray(err?.cause) && err.cause.length > 0) {
+        const causas = err.cause.map(c => c.description || c.code).filter(Boolean).join('; ');
+        if (causas) msg = `${msg} — ${causas}`;
+      }
+      if (typeof msg !== 'string') msg = JSON.stringify(msg);
+      res.status(e.response?.status || 500).json({ error: msg });
     }
   });
 
@@ -513,9 +540,35 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
   });
 
   app.post('/portal/pagamento/webhook', express.json(), async (req, res) => {
+    // Valida assinatura HMAC antes de qualquer processamento
+    if (!validarAssinaturaWebhookMP(req)) {
+      console.warn('[MP Webhook] Assinatura inválida — requisição ignorada. IP:', req.ip);
+      return res.sendStatus(200); // 200 para o MP não retentar; bloqueia silenciosamente
+    }
+
     res.sendStatus(200);
-    const body = req.body;
-    const paymentId = body.data?.id;
+    const body = req.body || {};
+
+    if ((body.type === 'subscription_preapproval' || body.topic === 'subscription_preapproval') && body.data?.id) {
+      (async () => {
+        const id = String(body.data.id);
+        try {
+          const pr = await axios.get(`${MP_BASE}/preapproval/${encodeURIComponent(id)}`, {
+            headers: { Authorization: `Bearer ${MP_TOKEN}` },
+          });
+          const st = String(pr.data?.status || '');
+          sqliteDb
+            .prepare(`UPDATE mp_subscriptions SET status = ?, updated_at = datetime('now') WHERE preapproval_id = ?`)
+            .run(st, id);
+        } catch (e) {
+          console.warn('[MP Webhook] preapproval sync:', e.response?.data || e.message);
+        }
+      })();
+      return;
+    }
+
+    const dataId = body.data?.id != null ? String(body.data?.id) : '';
+    const paymentId = dataId;
     const typeOk = body.type === 'payment' || (typeof body.action === 'string' && body.action.startsWith('payment'));
     if (!paymentId || !typeOk) return;
 
@@ -553,7 +606,6 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
           });
           tituloPre = sr.data;
         } catch (_) {}
-        const valorBaseMk = parseValorMkAuth(tituloPre?.valor ?? tituloPre?.dados?.valor);
 
         const mkRes = await axios.put(
           `${MK_URL}/titulo/receber`,
@@ -574,8 +626,13 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
         const loginCliente = tituloPre?.login || tituloPre?.dados?.login;
         if (loginCliente) {
           const resultado = concederPontosMP(loginCliente, tituloUuid);
-          tentarConsumirDescontoClubePosBaixa(loginCliente, tituloUuid, parseFloat(valor), valorBaseMk);
-          await notificarFaturaPagaComPontos(loginCliente, valor, resultado);
+          tentarConsumirDescontoClubePosBaixa(
+            loginCliente,
+            tituloUuid,
+            parseFloat(valor),
+            tituloPayloadParaCupomPortal(tituloPre, tituloUuid),
+          );
+          await notificarFaturaPagaComPontos(loginCliente, valor, resultado, forma);
         }
       } catch (inner) {
         mpLiberarReservaBaixa(paymentId);
@@ -648,10 +705,14 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
 
       const loginCliente = req.session?.cliente?.login;
       if (loginCliente) {
-        const valorBaseMk = parseValorMkAuth(tituloMk.valor ?? tituloMk.dados?.valor);
         const resultado = concederPontosMP(loginCliente, tituloUuid);
-        tentarConsumirDescontoClubePosBaixa(loginCliente, tituloUuid, valorFinal, valorBaseMk);
-        setImmediate(() => notificarFaturaPagaComPontos(loginCliente, valorFinal, resultado));
+        tentarConsumirDescontoClubePosBaixa(
+          loginCliente,
+          tituloUuid,
+          valorFinal,
+          tituloPayloadParaCupomPortal(tituloMk, tituloUuid),
+        );
+        setImmediate(() => notificarFaturaPagaComPontos(loginCliente, valorFinal, resultado, forma));
       }
       try {
         sqliteDb.prepare('DELETE FROM pending_payments WHERE mp_id = ?').run(String(mpId));
@@ -712,7 +773,7 @@ async function processarPagamentoConfirmado(row, pagData, concederPontosMP, noti
 
   const forma = mpFormaPagamentoDaTransacao(pagData);
   const valorBaixa = parseFloat(pagData.transaction_amount ?? valor);
-  let valorBaseMk = NaN;
+  let tituloMkPayload = null;
 
   try {
     const mkToken = await getJWT();
@@ -720,7 +781,7 @@ async function processarPagamentoConfirmado(row, pagData, concederPontosMP, noti
       const sr = await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(titulo_uuid)}`, {
         headers: { Authorization: `Bearer ${mkToken}` },
       });
-      valorBaseMk = parseValorMkAuth(sr.data?.valor ?? sr.data?.dados?.valor);
+      tituloMkPayload = sr.data;
     } catch (_) {}
 
     await axios.put(
@@ -744,8 +805,8 @@ async function processarPagamentoConfirmado(row, pagData, concederPontosMP, noti
   }
 
   const resultado = concederPontosMP(login, titulo_uuid);
-  tentarConsumirDescontoClubePosBaixa(login, titulo_uuid, valorBaixa, valorBaseMk);
-  setImmediate(() => notificarFaturaPagaComPontos(login, valorBaixa, resultado));
+  tentarConsumirDescontoClubePosBaixa(login, titulo_uuid, valorBaixa, tituloPayloadParaCupomPortal(tituloMkPayload, titulo_uuid));
+  setImmediate(() => notificarFaturaPagaComPontos(login, valorBaixa, resultado, forma));
 
   try {
     sqliteDb.prepare('DELETE FROM pending_payments WHERE mp_id = ?').run(mp_id);

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5"/>
   <title>Lemon Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
@@ -15,8 +15,11 @@
 <!-- ===== LOGIN ===== -->
 <div id="login-wrap" class="login-wrap">
   <div class="login-card">
-    <h2>🍋 Lemon Admin</h2>
-    <p>Painel de administração do portal</p>
+    <div class="login-brand">
+      <img src="/icons/lemon-logo.png" alt="" class="login-brand-mark" width="72" height="72" decoding="async"/>
+      <h1 class="login-brand-title">Lemon <span>Admin</span></h1>
+      <p class="login-brand-sub">Painel de administração do portal</p>
+    </div>
     <div class="form-group">
       <label>Usuário</label>
       <input id="login-user" class="form-input" type="text" placeholder="admin" autocomplete="username"/>
@@ -89,8 +92,17 @@
     </div>
   </aside>
 
+  <button type="button" class="admin-sidebar-backdrop" id="admin-sidebar-backdrop" aria-hidden="true" aria-label="Fechar menu" tabindex="-1"></button>
+
   <!-- Main -->
   <main class="main">
+
+    <header class="mobile-admin-header">
+      <button type="button" class="mobile-menu-btn" id="admin-menu-toggle" aria-label="Abrir menu de navegação" aria-expanded="false">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
+      <span class="mobile-admin-title" id="admin-mobile-page-title">Dashboard</span>
+    </header>
 
     <!-- Dashboard -->
     <div id="page-dashboard" class="page active">
@@ -118,6 +130,19 @@
 
       <div class="table-card" style="margin-top:16px">
         <div class="table-toolbar">
+          <h3><i class="fa-solid fa-spinner" style="color:var(--lemon);margin-right:8px"></i>Mensagens do splash (loading)</h3>
+          <button type="button" class="btn btn-primary btn-sm lemon" onclick="salvarSplashMensagensAdmin()">Guardar</button>
+        </div>
+        <p style="margin:0 0 12px;font-size:0.8rem;color:var(--muted);max-width:780px;line-height:1.5">
+          Frases que aparecem por baixo da logo durante o carregamento do portal (rodam à vez). Guardadas em
+          <code>splash_loading_mensagens</code>. JSON: array de strings (máx. 25 frases, ~180 caracteres cada).
+          Se deixares <code>[]</code> vazio, o portal usa mensagens padrão.
+        </p>
+        <textarea id="splash-mensagens-json" class="search-input" style="width:100%;min-height:140px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.45" spellcheck="false"></textarea>
+      </div>
+
+      <div class="table-card" style="margin-top:16px">
+        <div class="table-toolbar">
           <h3><i class="fa-solid fa-bell" style="color:var(--lemon);margin-right:8px"></i>Push (Web Push)</h3>
         </div>
         <p style="margin:0 0 12px;font-size:0.8rem;color:var(--muted);line-height:1.5">
@@ -136,13 +161,13 @@
       </div>
 
       <!-- Row 2: Top clientes + Níveis -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px" id="dash-row2"></div>
+      <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px" id="dash-row2"></div>
 
       <!-- Row 3: Financeiro -->
       <div style="margin-top:8px" id="dash-row3"></div>
 
       <!-- Row 4: Movimentos recentes -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px" id="dash-row4"></div>
+      <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px" id="dash-row4"></div>
     </div>
 
     <!-- Títulos -->
@@ -179,7 +204,7 @@
 
       <!-- ── Bloco mês atual (igual ao Títulos) ── -->
       <div class="table-card" style="padding:20px 24px;margin-bottom:16px" id="caixa-mes-bloco">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px" id="caixa-mes-cards">
+        <div class="admin-grid-4-sm" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px" id="caixa-mes-cards">
           <div style="text-align:center;padding:16px 10px;border:1px solid var(--border);border-radius:10px">
             <div class="spinner"></div>
           </div>
@@ -196,7 +221,7 @@
       </div>
 
       <!-- ── Gráficos ── -->
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="admin-stack-sm" style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
         <div class="table-card" style="padding:20px 24px">
           <h3 style="margin-bottom:4px;font-size:.9rem"><i class="fa-solid fa-chart-column" style="color:var(--lemon);margin-right:8px"></i>Entradas vs Saídas — últimos 30 dias</h3>
           <p style="font-size:.75rem;color:var(--muted);margin-bottom:14px">Dados do mês atual e período recente</p>
@@ -329,7 +354,7 @@
         <h2>Mensagens</h2>
         <p>Enviar email, SMS ou WhatsApp para clientes</p>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+      <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
         <!-- Email -->
         <div class="table-card" style="padding:24px">
           <h3 style="margin-bottom:20px;display:flex;align-items:center;gap:8px"><i class="fa-solid fa-envelope" style="color:var(--blue)"></i> E-mail</h3>
@@ -394,7 +419,7 @@
         <div class="stat-card"><div class="stat-icon" style="background:rgba(139,92,246,.15);color:#8b5cf6"><i class="fa-solid fa-users"></i></div><div class="stat-info"><span class="stat-value" id="ns-clientes">—</span><span class="stat-label">Clientes notificados</span></div></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
 
         <!-- Envio Manual -->
         <div class="table-card" style="padding:24px">
@@ -492,7 +517,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <!-- Painel de configuração -->
         <div class="table-card" style="padding:24px">
           <h3 style="margin-bottom:20px;font-size:.95rem"><i class="fa-solid fa-sliders" style="color:var(--lemon);margin-right:8px"></i>Configurar limpeza</h3>
@@ -604,7 +629,7 @@
       <div id="watch-admin-alert" style="display:none;padding:12px 18px;border-radius:10px;margin-bottom:16px;font-size:.88rem"></div>
 
       <!-- Tabs -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:6px;display:inline-flex;gap:4px;margin-bottom:24px">
+      <div class="watch-tabs-scroll" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:6px;display:flex;gap:4px;margin-bottom:24px">
         <button class="watch-tab active" onclick="watchTab('buscar')" id="wt-buscar">
           <i class="fa-solid fa-search"></i> Buscar
         </button>
@@ -632,7 +657,7 @@
             </div>
             <h3 style="font-size:.95rem;font-weight:700">Buscar Assinante</h3>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+          <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
             <div class="form-group" style="margin:0">
               <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">Pacote ID</label>
               <input class="form-input" id="wb-buscar-pacote" placeholder="ex: 36887"/>
@@ -668,7 +693,7 @@
             </div>
             <h3 style="font-size:.95rem;font-weight:700">Novo Assinante</h3>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
             <div class="form-group" style="margin:0">
               <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;font-weight:600">E-mail <span style="color:var(--red)">*</span></label>
               <input class="form-input" id="wb-ins-email" placeholder="cliente@email.com"/>
@@ -737,7 +762,7 @@
 
       <!-- Tab: Editar -->
       <div id="watch-panel-editar" class="watch-panel" style="display:none">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div class="table-card" style="padding:28px">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
               <div style="width:32px;height:32px;border-radius:8px;background:rgba(234,88,12,.1);display:flex;align-items:center;justify-content:center">
@@ -949,8 +974,44 @@ async function verificarSessao() {
   } catch { /* não logado */ }
 }
 
-// ── Navegação ──────────────────────────────────────────
+// ── Navegação / menu mobile ──────────────────────────────────────────
+const ADMIN_MOBILE_TITLES = {
+  dashboard: 'Dashboard',
+  clientes: 'Clientes',
+  'mk-clientes': 'MK Clientes',
+  chamados: 'Chamados',
+  mensagens: 'Mensagens',
+  titulos: 'Títulos',
+  caixa: 'Caixa',
+  planos: 'Planos',
+  missoes: 'Missões',
+  notificacoes: 'Notificações',
+  watch: 'Watch Brasil',
+  limpeza: 'Limpeza',
+};
+
+function setAdminSidebarOpen(open) {
+  const wrap = document.getElementById('admin-wrap');
+  const bd = document.getElementById('admin-sidebar-backdrop');
+  const btn = document.getElementById('admin-menu-toggle');
+  if (!wrap) return;
+  wrap.classList.toggle('sidebar-open', open);
+  document.body.classList.toggle('admin-nav-open', open);
+  if (bd) bd.setAttribute('aria-hidden', open ? 'false' : 'true');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function toggleAdminSidebar() {
+  const wrap = document.getElementById('admin-wrap');
+  if (!wrap) return;
+  setAdminSidebarOpen(!wrap.classList.contains('sidebar-open'));
+}
+
 function navAdmin(page) {
+  setAdminSidebarOpen(false);
+  const titleEl = document.getElementById('admin-mobile-page-title');
+  if (titleEl) titleEl.textContent = ADMIN_MOBILE_TITLES[page] || 'Admin';
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const pg = document.getElementById(`page-${page}`);
@@ -961,6 +1022,7 @@ function navAdmin(page) {
     void (async () => {
       await carregarStats();
       await carregarAvisosPortal();
+      await carregarSplashMensagensAdmin();
       await carregarPushAdminStats();
     })();
   }
@@ -979,6 +1041,7 @@ function navAdmin(page) {
 async function iniciar() {
   await carregarStats();
   await carregarAvisosPortal();
+  await carregarSplashMensagensAdmin();
   await carregarPushAdminStats();
 }
 
@@ -1036,6 +1099,32 @@ async function salvarAvisosPortal() {
     const d = await req('PUT', `${API}/portal-avisos`, { avisos: arr });
     ta.value = JSON.stringify(d.avisos || [], null, 2);
     toast('Avisos guardados.');
+  } catch (e) {
+    toast(e.message || 'Erro ao guardar', 'error');
+  }
+}
+
+async function carregarSplashMensagensAdmin() {
+  const ta = document.getElementById('splash-mensagens-json');
+  if (!ta) return;
+  try {
+    const d = await req('GET', `${API}/splash-mensagens`);
+    ta.value = JSON.stringify(d.mensagens || [], null, 2);
+  } catch (e) {
+    ta.value = `/* ${(e.message || 'Erro ao carregar').replace(/\*\//g, '')} */\n[]`;
+    toast(e.message || 'Erro ao carregar mensagens do splash', 'error');
+  }
+}
+
+async function salvarSplashMensagensAdmin() {
+  const ta = document.getElementById('splash-mensagens-json');
+  if (!ta) return;
+  try {
+    const arr = JSON.parse(ta.value || '[]');
+    if (!Array.isArray(arr)) throw new Error('O conteúdo tem de ser um array JSON.');
+    const d = await req('PUT', `${API}/splash-mensagens`, { mensagens: arr });
+    ta.value = JSON.stringify(d.mensagens || [], null, 2);
+    toast('Mensagens do splash guardadas.');
   } catch (e) {
     toast(e.message || 'Erro ao guardar', 'error');
   }
@@ -1165,7 +1254,7 @@ async function carregarStats() {
           <h3 style="font-size:.95rem"><i class="fa-solid fa-file-invoice-dollar" style="color:var(--green);margin-right:8px"></i>Títulos / Cobranças</h3>
           <span style="background:rgba(182,195,63,.1);color:var(--lemon);border:1px solid rgba(182,195,63,.2);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600">${tit.mesLabel||'Mês atual'}</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div class="admin-grid-fill-sm admin-grid-4-sm" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
           <!-- Pagamentos recebidos este mês (contagem do caixa) -->
           <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:14px;text-align:center">
             <div style="font-size:.62rem;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Pagos este mês</div>
@@ -1251,7 +1340,7 @@ async function carregarStats() {
           <h3 style="font-size:.95rem"><i class="fa-solid fa-cash-register" style="color:var(--blue);margin-right:8px"></i>Caixa — Mês Atual</h3>
           <span style="background:rgba(182,195,63,.1);color:var(--lemon);border:1px solid rgba(182,195,63,.2);border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:600">${tit.mesLabel||'Mês atual'}</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="admin-stack-sm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
           <div style="background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:10px;padding:14px;text-align:center">
             <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px"><i class="fa-solid fa-arrow-down"></i> Entradas</div>
             <div style="font-size:1.15rem;font-weight:800;color:var(--green)">${fmtR(cx.receitaMes)}</div>
@@ -1315,9 +1404,7 @@ async function carregarTitulos(pagina = 1) {
     const pag = document.getElementById('titulos-paginacao');
     if (pag) {
       const total = d.total_paginas || 1;
-      pag.innerHTML = Array.from({length:Math.min(total,10)},(_,i)=>i+1).map(p=>
-        `<button class="btn-sm ${p===pagina?'lemon':''}" onclick="carregarTitulos(${p})">${p}</button>`
-      ).join('') + (total>10?`<span style="color:var(--muted);font-size:.8rem;padding:4px 8px">... ${total} págs</span>`:'');
+      pag.innerHTML = paginacaoHtml(total, pagina, 'carregarTitulos');
     }
   } catch(e) { toast('Erro títulos: ' + e.message, 'error'); }
 }
@@ -1787,9 +1874,7 @@ async function carregarMkClientes(pagina = 1) {
     const pag = document.getElementById('mk-paginacao');
     if (pag) {
       const total = d.total_paginas || d.paginas || 1;
-      pag.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(p =>
-        `<button class="btn-sm ${p===pagina?'lemon':''}" onclick="carregarMkClientes(${p})">${p}</button>`
-      ).join('');
+      pag.innerHTML = paginacaoHtml(total, pagina, 'carregarMkClientes');
     }
   } catch(e) { toast('Erro MK Clientes: ' + e.message, 'error'); if(tbody) tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Erro ao carregar</div></td></tr>`; }
 }
@@ -1908,28 +1993,29 @@ async function carregarChamados(pagina = 1) {
       tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-ticket-slash"></i>Nenhum chamado encontrado</div></td></tr>`;
     } else {
       const priorCor = { alta: '#ef4444', normal: '#fb923c', baixa: '#4ade80' };
-      tbody.innerHTML = chamados.map(c => `<tr>
-        <td><code style="font-size:.78rem">${c.chamado||c.numero||'—'}</code></td>
-        <td><strong>${c.login||'—'}</strong></td>
-        <td>${c.assunto||'—'}</td>
-        <td><span style="color:${priorCor[c.prioridade]||'var(--muted)'}">●</span> ${c.prioridade||'—'}</td>
+      tbody.innerHTML = chamados.map(c => {
+        const num = escHtml(c.chamado||c.numero||'');
+        const numRaw = String(c.chamado||c.numero||'').replace(/['"\\]/g,'');
+        return `<tr>
+        <td><code style="font-size:.78rem">${num||'—'}</code></td>
+        <td><strong>${escHtml(c.login||'—')}</strong></td>
+        <td>${escHtml(c.assunto||'—')}</td>
+        <td><span style="color:${priorCor[c.prioridade]||'var(--muted)'}">●</span> ${escHtml(c.prioridade||'—')}</td>
         <td>${c.status==='aberto'?'<span class="badge badge-green">Aberto</span>':'<span class="badge badge-muted">Fechado</span>'}</td>
         <td style="color:var(--muted);font-size:.75rem">${fmtData(c.data||c.criado)}</td>
         <td style="display:flex;gap:4px">
-          <button class="btn-sm lemon" onclick="verChamado('${c.chamado||c.numero}')"><i class="fa-solid fa-eye"></i></button>
+          <button class="btn-sm lemon" onclick="verChamado('${numRaw}')"><i class="fa-solid fa-eye"></i></button>
           ${c.status==='aberto'
-            ? `<button class="btn-sm" style="background:rgba(239,68,68,.15);color:#ef4444" onclick="fecharChamadoPrompt('${c.chamado||c.numero}')"><i class="fa-solid fa-xmark"></i></button>`
-            : `<button class="btn-sm" style="background:rgba(74,222,128,.1);color:#4ade80" onclick="reabrirChamado('${c.chamado||c.numero}')"><i class="fa-solid fa-rotate"></i></button>`}
-          <button class="btn-sm" style="background:rgba(239,68,68,.1);color:#ef4444" onclick="deletarChamado('${c.chamado||c.numero}')"><i class="fa-solid fa-trash"></i></button>
+            ? `<button class="btn-sm" style="background:rgba(239,68,68,.15);color:#ef4444" onclick="fecharChamadoPrompt('${numRaw}')"><i class="fa-solid fa-xmark"></i></button>`
+            : `<button class="btn-sm" style="background:rgba(74,222,128,.1);color:#4ade80" onclick="reabrirChamado('${numRaw}')"><i class="fa-solid fa-rotate"></i></button>`}
+          <button class="btn-sm" style="background:rgba(239,68,68,.1);color:#ef4444" onclick="deletarChamado('${numRaw}')"><i class="fa-solid fa-trash"></i></button>
         </td>
-      </tr>`).join('');
+      </tr>`;}).join('');
     }
     const pag = document.getElementById('chamados-paginacao');
     if (pag) {
       const total = d.total_paginas || d.paginas || 1;
-      pag.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(p =>
-        `<button class="btn-sm ${p===pagina?'lemon':''}" onclick="carregarChamados(${p})">${p}</button>`
-      ).join('');
+      pag.innerHTML = paginacaoHtml(total, pagina, 'carregarChamados');
     }
   } catch(e) { toast('Erro chamados: ' + e.message, 'error'); }
 }
@@ -1938,12 +2024,12 @@ async function verChamado(numero) {
   try {
     const d = await req('GET', `${API}/mk/chamado/${numero}`);
     const c = d.dados || d;
-    const priorCor = { alta: '#ef4444', normal: '#fb923c', baixa: '#4ade80' };
+    const numRaw = String(numero).replace(/['"\\]/g,'');
     showModal(`
-      <h3 style="margin-bottom:16px"><i class="fa-solid fa-headset" style="color:var(--lemon)"></i> Chamado #${numero}</h3>
+      <h3 style="margin-bottom:16px"><i class="fa-solid fa-headset" style="color:var(--lemon)"></i> Chamado #${escHtml(numero)}</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-        <div class="form-group"><label>Login</label><div class="form-input" style="opacity:.7">${c.login||'—'}</div></div>
-        <div class="form-group"><label>Assunto</label><div class="form-input" style="opacity:.7">${c.assunto||'—'}</div></div>
+        <div class="form-group"><label>Login</label><div class="form-input" style="opacity:.7">${escHtml(c.login||'—')}</div></div>
+        <div class="form-group"><label>Assunto</label><div class="form-input" style="opacity:.7">${escHtml(c.assunto||'—')}</div></div>
         <div class="form-group"><label>Prioridade</label>
           <select class="form-input" id="ch-prio">
             <option value="baixa" ${c.prioridade==='baixa'?'selected':''}>Baixa</option>
@@ -1951,12 +2037,12 @@ async function verChamado(numero) {
             <option value="alta" ${c.prioridade==='alta'?'selected':''}>Alta</option>
           </select>
         </div>
-        <div class="form-group"><label>Status</label><div class="form-input" style="opacity:.7">${c.status||'—'}</div></div>
+        <div class="form-group"><label>Status</label><div class="form-input" style="opacity:.7">${escHtml(c.status||'—')}</div></div>
       </div>
-      <div class="form-group"><label>Mensagem</label><div class="form-input" style="opacity:.7;white-space:pre-wrap;min-height:80px">${c.mensagem||c.descricao||'—'}</div></div>
+      <div class="form-group"><label>Mensagem</label><div class="form-input" style="opacity:.7;white-space:pre-wrap;min-height:80px">${escHtml(c.mensagem||c.descricao||'—')}</div></div>
       <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
         <button class="btn-sm" onclick="closeModal()">Fechar</button>
-        <button class="btn-primary" onclick="editarChamadoPrio('${numero}')">Salvar prioridade</button>
+        <button class="btn-primary" onclick="editarChamadoPrio('${numRaw}')">Salvar prioridade</button>
       </div>
     `);
   } catch(e) { toast('Erro: ' + e.message, 'error'); }
@@ -2032,6 +2118,9 @@ function abrirModalNovoChamado() {
         <option value="alta">Alta</option>
       </select>
     </div>
+    <div class="form-group"><label>Mensagem / descrição *</label>
+      <textarea class="form-input" id="nc-ch-mensagem" rows="4" placeholder="Descreva o motivo do chamado..." style="resize:vertical;min-height:80px"></textarea>
+    </div>
     <div id="nc-ch-erro" style="color:var(--red);font-size:.85rem;margin-top:8px;display:none"></div>
     <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
       <button class="btn-sm" onclick="closeModal()">Cancelar</button>
@@ -2041,13 +2130,15 @@ function abrirModalNovoChamado() {
 }
 
 async function salvarNovoChamado() {
-  const login   = document.getElementById('nc-ch-login')?.value?.trim();
-  const assunto = document.getElementById('nc-ch-assunto')?.value;
+  const login      = document.getElementById('nc-ch-login')?.value?.trim();
+  const assunto    = document.getElementById('nc-ch-assunto')?.value;
   const prioridade = document.getElementById('nc-ch-prio')?.value;
+  const mensagem   = document.getElementById('nc-ch-mensagem')?.value?.trim();
   const erro = document.getElementById('nc-ch-erro');
-  if (!login) { erro.textContent = 'Informe o login.'; erro.style.display='block'; return; }
+  if (!login)    { erro.textContent = 'Informe o login.'; erro.style.display='block'; return; }
+  if (!mensagem) { erro.textContent = 'Informe a mensagem/descrição.'; erro.style.display='block'; return; }
   try {
-    await req('POST', `${API}/mk/chamado/inserir`, { login, assunto, prioridade });
+    await req('POST', `${API}/mk/chamado/inserir`, { login, assunto, prioridade, mensagem });
     toast('Chamado criado!');
     closeModal();
     carregarChamados();
@@ -2205,7 +2296,7 @@ function showModal(html) {
     m.addEventListener('click', e => { if(e.target===m) closeModal(); });
     document.body.appendChild(m);
   }
-  m.innerHTML = `<div style="background:var(--card);border-radius:var(--radius);padding:28px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border)">${html}</div>`;
+  m.innerHTML = `<div class="gen-modal-box" style="background:var(--card);border-radius:var(--radius);padding:28px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border)">${html}</div>`;
   m.style.display = 'flex';
 }
 
@@ -2511,6 +2602,29 @@ async function carregarHistorico(pagina = 1) {
   }
 }
 
+// Gera HTML de paginação compacta: mostra no máx 7 botões + reticências
+function paginacaoHtml(total, atual, callbackFn) {
+  if (total <= 1) return '';
+  const max = 7;
+  let pages = [];
+  if (total <= max) {
+    pages = Array.from({length: total}, (_, i) => i + 1);
+  } else {
+    const left  = Math.max(2, atual - 1);
+    const right = Math.min(total - 1, atual + 1);
+    pages = [1];
+    if (left > 2)       pages.push('…');
+    for (let p = left; p <= right; p++) pages.push(p);
+    if (right < total - 1) pages.push('…');
+    pages.push(total);
+  }
+  return pages.map(p =>
+    p === '…'
+      ? `<span style="padding:4px 6px;color:var(--muted)">…</span>`
+      : `<button class="btn-sm ${p===atual?'lemon':''}" onclick="${callbackFn}(${p})">${p}</button>`
+  ).join('');
+}
+
 function escHtml(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -2719,7 +2833,14 @@ async function watchDeletar() {
   } catch (e) { watchAlert(e.message, 'error'); }
 }
 
-// Init
+// Init menu mobile + Escape
+document.getElementById('admin-menu-toggle')?.addEventListener('click', () => toggleAdminSidebar());
+document.getElementById('admin-sidebar-backdrop')?.addEventListener('click', () => setAdminSidebarOpen(false));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.body.classList.contains('admin-nav-open')) setAdminSidebarOpen(false);
+});
+
 verificarSessao();
 </script>
 </body>

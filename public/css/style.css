@@ -65,6 +65,116 @@ input, select, textarea { font-family: inherit; }
 .page.active { display: block; }
 
 /* ===========================
+   SPLASH (abertura — logo + teal)
+   =========================== */
+
+.lemon-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #1a5d77;
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.45s step-end;
+}
+
+.lemon-splash__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.35rem;
+  padding: 8vmin;
+}
+
+.lemon-splash__logo {
+  display: block;
+  width: min(32vmin, 132px);
+  height: auto;
+  max-width: 100%;
+  border-radius: 0;
+  object-fit: contain;
+  transform-origin: center center;
+  animation:
+    lemonSplashPop 0.95s cubic-bezier(0.34, 1.35, 0.64, 1) both,
+    lemonSplashBreathe 2.4s ease-in-out 0.95s infinite;
+}
+
+.lemon-splash__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.lemon-splash__spinner {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255, 255, 255, 0.22);
+  border-top-color: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  animation: lemonSplashSpin 0.7s linear infinite;
+}
+
+.lemon-splash__loading-text {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.lemon-splash--out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@keyframes lemonSplashPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.42) rotate(-10deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.08) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes lemonSplashBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.045); }
+}
+
+@keyframes lemonSplashSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lemon-splash__logo {
+    animation: lemonSplashFade 0.4s ease-out both;
+  }
+  .lemon-splash__spinner {
+    animation: none;
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: rgba(255, 255, 255, 0.75);
+    opacity: 0.9;
+  }
+  @keyframes lemonSplashFade {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+/* ===========================
    AURORA / BACKGROUND FX
    =========================== */
 
@@ -651,6 +761,7 @@ input, select, textarea { font-family: inherit; }
 .alert { padding: 11px 16px; border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 14px; backdrop-filter: blur(8px); }
 .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #991b1b; }
 .alert-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #166534; }
+.alert-warning { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.32); color: #92400e; }
 
 /* ===========================
    CADASTRO (multi-steps)
@@ -2129,6 +2240,19 @@ input, select, textarea { font-family: inherit; }
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.fatura-valor-cupom-micro {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  opacity: 0.92;
+  line-height: 1.45;
+  text-align: right;
+}
+.fatura-valor-cupom-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text);
+}
 .fatura-valor-cupom-line--save .fatura-valor-cupom-save {
   color: #65a30d;
   font-weight: 700;
@@ -2460,6 +2584,346 @@ input, select, textarea { font-family: inherit; }
   margin-bottom: 16px;
   padding: 18px 20px;
 }
+
+/* ── Banner de cupom no modal de fatura ──────────────────────────────────── */
+.fatura-modal-cupom-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(
+    120deg,
+    rgba(var(--lemon-rgb), 0.16) 0%,
+    rgba(var(--blue-rgb), 0.1) 55%,
+    rgba(var(--lemon-rgb), 0.08) 100%
+  );
+  border: 1px solid rgba(var(--lemon-rgb), 0.28);
+  box-shadow: 0 4px 18px rgba(var(--blue-rgb), 0.08);
+}
+.fatura-modal-cupom-banner__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+.fatura-modal-cupom-banner__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(var(--lemon-rgb), 0.28);
+  border: 1px solid rgba(var(--lemon-rgb), 0.35);
+  color: var(--lemon-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+.fatura-modal-cupom-banner__titulo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fatura-modal-cupom-banner__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--lemon-dark);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fatura-modal-cupom-banner__pct {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--lemon-dark);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.fatura-modal-cupom-banner__pct small {
+  display: block;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--lemon-dark);
+  opacity: 0.75;
+  margin-top: 2px;
+  letter-spacing: 0;
+}
+
+
+/* ── Cupons style iFood ──────────────────────────────────────────────────── */
+.cupom-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+.cupom-empty__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  color: #86efac;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 16px;
+}
+.cupom-empty__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+.cupom-empty__sub {
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+.cupom-empty__sub strong { color: #16a34a; }
+
+.cupom-sec-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 20px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Voucher card */
+.cupom-voucher {
+  display: flex;
+  align-items: stretch;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.10);
+  background: #fff;
+}
+.cupom-voucher--usado {
+  opacity: 0.72;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.cupom-voucher--bloqueado {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.cupom-voucher__stamp--locked {
+  background: linear-gradient(160deg, #f59e0b, #d97706);
+}
+.cupom-voucher__notch--locked::before,
+.cupom-voucher__notch--locked::after {
+  background: #f1f5f9;
+}
+.cupom-voucher__status--locked {
+  color: #d97706;
+}
+.cupom-voucher__bloqueado-msg {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+  font-size: 0.79rem;
+  font-weight: 600;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+.cupom-voucher__bloqueado-msg i {
+  color: #f59e0b;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+/* Estado: fatura alvo vencida (vermelho) */
+.cupom-voucher__bloqueado-msg--vencida {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
+}
+.cupom-voucher__bloqueado-msg--vencida i {
+  color: #e11d48;
+}
+
+/* Lado esquerdo do ticket — percentual */
+.cupom-voucher__stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 14px;
+  background: linear-gradient(160deg, #84cc16, #65a30d);
+  min-width: 80px;
+  color: #fff;
+  flex-shrink: 0;
+  position: relative;
+}
+.cupom-voucher__stamp--used {
+  background: linear-gradient(160deg, #94a3b8, #64748b);
+}
+.cupom-voucher__pct {
+  font-size: 1.7rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.cupom-voucher__off {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-top: 2px;
+  opacity: 0.9;
+}
+
+/* Separador com meia-círculos (efeito picote) */
+.cupom-voucher__notch {
+  width: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+.cupom-voucher__notch::before,
+.cupom-voucher__notch::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  z-index: 2;
+}
+.cupom-voucher__notch::before { top: -9px; }
+.cupom-voucher__notch::after  { bottom: -9px; }
+.cupom-voucher__notch--used::before,
+.cupom-voucher__notch--used::after { background: #f1f5f9; }
+
+/* Linha tracejada vertical */
+.cupom-voucher__stamp::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 10%;
+  height: 80%;
+  border-right: 2px dashed rgba(255,255,255,0.35);
+}
+
+/* Lado direito — conteúdo */
+.cupom-voucher__body {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+}
+.cupom-voucher__status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cupom-voucher__status--used {
+  color: #94a3b8;
+}
+.cupom-voucher__label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.3;
+}
+.cupom-voucher__meta {
+  font-size: 0.79rem;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.cupom-voucher__meta strong { color: #1e293b; }
+.cupom-voucher__desde {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cupom-voucher__btn {
+  margin-top: 10px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #84cc16, #65a30d);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.84rem;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-shadow: 0 2px 8px rgba(101, 163, 13, 0.35);
+  transition: opacity 0.15s, transform 0.12s;
+  width: 100%;
+}
+.cupom-voucher__btn:active {
+  opacity: 0.88;
+  transform: scale(0.97);
+}
+.cupom-voucher__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.cupom-voucher__pago {
+  font-size: 0.77rem;
+  color: #64748b;
+}
+.cupom-voucher__economy {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #16a34a;
+}
+.cupom-voucher__data {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  margin-left: auto;
+}
+.cupom-voucher__icon-stamp {
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #fff;
+}
+.cupom-hist-pts {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
 .perfil-carteira-head {
   display: flex;
   align-items: flex-start;
@@ -2547,11 +3011,30 @@ input, select, textarea { font-family: inherit; }
 }
 .carteira-input-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 8px;
   margin-bottom: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
-.carteira-input-row .carteira-input { margin-bottom: 0; }
+.carteira-input-row .carteira-input { margin-bottom: 0; min-width: 0; }
+.carteira-debito-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 10px 0 4px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.carteira-debito-opt input {
+  margin-top: 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.carteira-debito-opt span { flex: 1; min-width: 0; }
 .carteira-add-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2855,7 +3338,37 @@ input, select, textarea { font-family: inherit; }
   line-height: normal;
 }
 
-/* ===== FATURA MODAL REDESIGN ===== */
+.mp-sub-panel {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+.mp-sub-panel .mp-sub-expiry-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+.mp-sub-panel .mp-sub-expiry-row input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: #fff;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.3;
+  -webkit-appearance: none;
+  appearance: none;
+}
 .fatura-modal-hero {
   border-radius: 14px;
   border: 1px solid;
@@ -3235,6 +3748,57 @@ input, select, textarea { font-family: inherit; }
   padding: 2px 0 8px;
 }
 
+/* Condomínio 280: três blocos numa linha */
+.bourroul-280-blocos-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 520px;
+  gap: 12px;
+}
+
+@media (max-width: 380px) {
+  .bourroul-280-blocos-grid {
+    grid-template-columns: 1fr;
+    max-width: 300px;
+  }
+}
+
+/* R. Conde de Itaguaí — mesma grelha 2+3 que Bourroul (.rp-condominios-cinco-numeros): 299|300; 321|340|380 */
+.rp-itaguai-condominios-grid {
+  grid-template-columns: 1fr;
+  max-width: min(500px, 96vw);
+}
+
+/* Itaguaí 321 — 4 blocos em grelha 2×2 */
+.rp-itaguai-321-blocos-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: min(420px, 96vw);
+  margin-left: auto;
+  margin-right: auto;
+  gap: 14px;
+}
+
+/* Itaguaí 300/340/380 — andares 1–9 em grelha 3×3 (azulejo) */
+.rp-itaguai-torre-andar-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: min(400px, 96vw);
+  margin-left: auto;
+  margin-right: auto;
+  gap: 14px;
+}
+
+.rp-itaguai-torre-andar-grid .rp-azulejo {
+  min-height: 128px;
+  padding: 14px 10px;
+}
+
+.rp-itaguai-torre-andar-grid .rp-azulejo-nome {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: normal;
+  max-width: 100%;
+}
+
 .rp-azulejo {
   position: relative;
   display: flex;
@@ -3284,16 +3848,44 @@ input, select, textarea { font-family: inherit; }
   transform: translateY(-1px) scale(1.01);
 }
 
-/* Bourroul — condomínios: azulejos um pouco maiores; Cingapura em linha inteira em baixo */
+/* Bourroul — condomínios: cinco números (2+3); Cingapura em linha inteira em baixo */
 .rp-azulejos-grid--condominios {
-  max-width: 460px;
+  max-width: 500px;
   gap: 16px;
 }
 
+/* 308 | 280 na 1ª linha; 350 | 360 | 370 na 2ª — mesmas dimensões de azulejo em todas */
+.rp-condominios-cinco-numeros {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rp-condominios-cinco-numeros > :nth-child(1) {
+  grid-column: 1 / 4;
+}
+
+.rp-condominios-cinco-numeros > :nth-child(2) {
+  grid-column: 4 / 7;
+}
+
+.rp-condominios-cinco-numeros > :nth-child(3) {
+  grid-column: 1 / 3;
+}
+
+.rp-condominios-cinco-numeros > :nth-child(4) {
+  grid-column: 3 / 5;
+}
+
+.rp-condominios-cinco-numeros > :nth-child(5) {
+  grid-column: 5 / 7;
+}
+
 .rp-azulejos-grid--condominios .rp-azulejo {
-  min-height: 132px;
-  padding: 18px 14px;
-  gap: 11px;
+  min-height: 142px;
+  padding: 20px 14px;
+  gap: 12px;
   border-radius: 18px;
 }
 
@@ -3302,38 +3894,67 @@ input, select, textarea { font-family: inherit; }
 }
 
 .rp-azulejos-grid--condominios .rp-azulejo-icone {
-  width: 50px;
-  height: 50px;
-  font-size: 1.15rem;
-  border-radius: 13px;
-}
-
-.rp-azulejos-grid--condominios .rp-azulejo-nome {
-  font-size: 1.06rem;
-}
-
-.rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque,
-.rp-azulejos-grid--condominios .rp-azulejo:nth-child(3) {
-  grid-column: 1 / -1;
-  width: 100%;
-  min-height: 128px;
-  flex-direction: row;
-  justify-content: center;
-  gap: 16px;
-  padding: 18px 22px;
-}
-
-.rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque .rp-azulejo-icone,
-.rp-azulejos-grid--condominios .rp-azulejo:nth-child(3) .rp-azulejo-icone {
-  width: 56px;
-  height: 56px;
-  font-size: 1.28rem;
+  width: 52px;
+  height: 52px;
+  font-size: 1.2rem;
   border-radius: 14px;
 }
 
-.rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque .rp-azulejo-nome,
-.rp-azulejos-grid--condominios .rp-azulejo:nth-child(3) .rp-azulejo-nome {
-  font-size: 1.12rem;
+.rp-azulejos-grid--condominios .rp-azulejo-nome {
+  font-size: 1.1rem;
+}
+
+/* R. Barão de Castro Lima — 125 / 381: azulejos bem largos e altos (só aqui) */
+.castro-lima-condominios-inner.bourroul-condominios-page-inner {
+  max-width: min(560px, 96vw);
+}
+
+.castro-lima-condominios-grid.rp-azulejos-grid.rp-azulejos-grid--condominios {
+  width: 100%;
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+  gap: clamp(20px, 5vw, 30px);
+}
+
+#page-castro-lima-condominios .castro-lima-condominios-grid.rp-azulejos-grid--condominios .rp-azulejo {
+  min-height: 192px;
+  padding: 34px 28px;
+  gap: 18px;
+  border-radius: 24px;
+}
+
+#page-castro-lima-condominios .castro-lima-condominios-grid.rp-azulejos-grid--condominios .rp-azulejo::after {
+  inset: 9px;
+  border-radius: 17px;
+}
+
+#page-castro-lima-condominios .castro-lima-condominios-grid.rp-azulejos-grid--condominios .rp-azulejo-icone {
+  width: 68px;
+  height: 68px;
+  font-size: 1.45rem;
+  border-radius: 17px;
+}
+
+#page-castro-lima-condominios .castro-lima-condominios-grid.rp-azulejos-grid--condominios .rp-azulejo-nome {
+  font-size: 1.38rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* Cingapura: mesmo “azulejo” que os números, centrado (não barra full-width) */
+.rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque {
+  grid-column: 1 / -1;
+  width: auto;
+  max-width: min(240px, 46vw);
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 142px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 14px;
 }
 
 .rp-azulejo-icone {
@@ -3372,24 +3993,96 @@ input, select, textarea { font-family: inherit; }
   background: linear-gradient(145deg, rgba(245, 158, 11, 0.2), rgba(255, 255, 255, 0.92));
 }
 
+.rp-azulejo--cor-teal .rp-azulejo-icone {
+  color: #0f766e;
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.2), rgba(255, 255, 255, 0.92));
+}
+
+.rp-azulejo--cor-violet .rp-azulejo-icone {
+  color: #5b21b6;
+  background: linear-gradient(145deg, rgba(91, 33, 182, 0.18), rgba(255, 255, 255, 0.92));
+}
+
+.rp-azulejo--cor-rose .rp-azulejo-icone {
+  color: #9f1239;
+  background: linear-gradient(145deg, rgba(225, 29, 72, 0.16), rgba(255, 255, 255, 0.92));
+}
+
+.rp-azulejo--cor-vermelho .rp-azulejo-icone {
+  color: #dc2626;
+  background: linear-gradient(145deg, rgba(220, 38, 38, 0.22), rgba(255, 255, 255, 0.92));
+}
+
+.rp-azulejo--cor-vermelho-escuro .rp-azulejo-icone {
+  color: #7f1d1d;
+  background: linear-gradient(145deg, rgba(127, 29, 29, 0.32), rgba(255, 255, 255, 0.9));
+}
+
+/** Amarelo vivo (Itaguaí 321) — distinto do `cor-amarelo` laranja dos outros ecrãs */
+.rp-azulejo--cor-amarelo-brilho .rp-azulejo-icone {
+  color: #ca8a04;
+  background: linear-gradient(145deg, rgba(234, 179, 8, 0.35), rgba(255, 255, 255, 0.92));
+}
+
 @media (max-width: 380px) {
-  .rp-azulejos-grid {
+  .rp-azulejos-grid:not(.rp-itaguai-condominios-grid):not(.rp-itaguai-torre-andar-grid):not(.rp-itaguai-321-blocos-grid):not(.castro-lima-condominios-grid) {
     grid-template-columns: 1fr;
     max-width: 280px;
   }
-  .rp-azulejos-grid--condominios .rp-azulejo:nth-child(3),
-  .rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque {
-    grid-column: auto;
-    width: 100%;
-    flex-direction: column;
-    gap: 11px;
+  .castro-lima-condominios-grid.rp-azulejos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: min(560px, 94vw);
   }
-
-  .rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque .rp-azulejo-icone,
-  .rp-azulejos-grid--condominios .rp-azulejo:nth-child(3) .rp-azulejo-icone {
-    width: 50px;
-    height: 50px;
-    font-size: 1.15rem;
+  .rp-azulejos-grid.rp-itaguai-torre-andar-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: min(400px, 94vw);
+    gap: 12px;
+  }
+  .rp-azulejos-grid.rp-itaguai-condominios-grid {
+    grid-template-columns: 1fr;
+    max-width: min(500px, 96vw);
+    gap: 12px;
+  }
+  /* Bourroul: empilhar os cinco + Cingapura em ecrãs muito estreitos */
+  .rp-azulejos-grid--condominios:not(.rp-itaguai-condominios-grid) .rp-condominios-cinco-numeros {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .rp-azulejos-grid--condominios:not(.rp-itaguai-condominios-grid) .rp-condominios-cinco-numeros > :nth-child(1),
+  .rp-azulejos-grid--condominios:not(.rp-itaguai-condominios-grid) .rp-condominios-cinco-numeros > :nth-child(2),
+  .rp-azulejos-grid--condominios:not(.rp-itaguai-condominios-grid) .rp-condominios-cinco-numeros > :nth-child(3),
+  .rp-azulejos-grid--condominios:not(.rp-itaguai-condominios-grid) .rp-condominios-cinco-numeros > :nth-child(4),
+  .rp-azulejos-grid--condominios:not(.rp-itaguai-condominios-grid) .rp-condominios-cinco-numeros > :nth-child(5) {
+    grid-column: auto;
+  }
+  /* Itaguaí: manter 2+3 (sem buraco à direita) também em ≤380px */
+  .rp-itaguai-condominios-grid .rp-condominios-cinco-numeros {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .rp-itaguai-condominios-grid .rp-condominios-cinco-numeros > :nth-child(1) {
+    grid-column: 1 / 4;
+  }
+  .rp-itaguai-condominios-grid .rp-condominios-cinco-numeros > :nth-child(2) {
+    grid-column: 4 / 7;
+  }
+  .rp-itaguai-condominios-grid .rp-condominios-cinco-numeros > :nth-child(3) {
+    grid-column: 1 / 3;
+  }
+  .rp-itaguai-condominios-grid .rp-condominios-cinco-numeros > :nth-child(4) {
+    grid-column: 3 / 5;
+  }
+  .rp-itaguai-condominios-grid .rp-condominios-cinco-numeros > :nth-child(5) {
+    grid-column: 5 / 7;
+  }
+  .rp-azulejos-grid--condominios .rp-azulejo--condominio-destaque {
+    grid-column: 1 / -1;
+    width: auto;
+    max-width: min(240px, 88vw);
+    margin-left: auto;
+    margin-right: auto;
+    flex-direction: column;
+    gap: 12px;
   }
 }
 
@@ -3548,25 +4241,72 @@ input, select, textarea { font-family: inherit; }
   max-height: min(42vh, 380px);
 }
 
+/* Torres 350/360/370, 308 e 280: mesmos azulejos que Cingapura; só área com scroll */
+#torre-apts-grid.torre-rp-apts-scroll,
+#torre308-apts-grid.torre-rp-apts-scroll,
+#torre280-apts-grid.torre-rp-apts-scroll,
+#itaguai299-apts-grid.torre-rp-apts-scroll,
+#itaguai321-apts-grid.torre-rp-apts-scroll,
+#itaguai-torre-apts-grid.torre-rp-apts-scroll {
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  padding-right: 2px;
+}
+
+/* 308 e Itaguaí 299: 5 apartamentos por andar na horizontal */
+#torre308-apts-grid.cingapura-apts-grid,
+#itaguai299-apts-grid.cingapura-apts-grid,
+#itaguai321-apts-grid.cingapura-apts-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+/* Itaguaí 300/340/380: 14 APs num andar — 4 colunas (legível no telemóvel) */
+#itaguai-torre-apts-grid.cingapura-apts-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 440px;
+}
+
+/* 280: B1 = 4 colunas; B2/B3 = 5 colunas por andar */
+#torre280-apts-grid.torre280-apts-grid--4col {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#torre280-apts-grid.torre280-apts-grid--5col {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 @media (max-width: 400px) {
-  .cingapura-apts-grid {
+  #torre-apts-grid.torre-rp-apts-scroll,
+  #torre308-apts-grid.torre-rp-apts-scroll,
+  #torre280-apts-grid.torre-rp-apts-scroll,
+  #itaguai299-apts-grid.torre-rp-apts-scroll,
+  #itaguai321-apts-grid.torre-rp-apts-scroll,
+  #itaguai-torre-apts-grid.torre-rp-apts-scroll {
+    max-height: min(50vh, 480px);
+  }
+
+  /* 3 colunas só no ecrã de APs do Cingapura (12 botões); torre mantém 4×7 */
+  #cingapura-apts-grid.cingapura-apts-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     max-width: 100%;
   }
 
-  .cingapura-apts-grid .rp-azulejo--cingapura-par {
+  #cingapura-apts-grid .rp-azulejo--cingapura-par {
     max-height: 92px;
     padding: 12px 6px;
   }
 
-  .cingapura-apts-grid .rp-azulejo--cingapura-par .rp-azulejo-icone {
+  #cingapura-apts-grid .rp-azulejo--cingapura-par .rp-azulejo-icone {
     width: 36px;
     height: 36px;
     font-size: 0.88rem;
   }
 
-  .cingapura-apts-grid .rp-azulejo--cingapura-par .rp-azulejo-nome {
+  #cingapura-apts-grid .rp-azulejo--cingapura-par .rp-azulejo-nome {
     font-size: 0.82rem;
   }
 }
@@ -4347,6 +5087,83 @@ input, select, textarea { font-family: inherit; }
    =========================== */
 
 /* Hero do clube */
+/* Lemon Club — separadores (uma secção por vez, navegação horizontal no mobile) */
+.club-seg-nav {
+  display: flex;
+  gap: 3px;
+  padding: 5px;
+  margin: 0 0 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 20;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  scroll-snap-type: x proximity;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.club-seg-nav::-webkit-scrollbar {
+  display: none;
+}
+.club-seg-btn {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 13px;
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color 0.17s ease,
+    background 0.17s ease;
+}
+.club-seg-btn i {
+  font-size: 0.72rem;
+  transition: opacity 0.17s ease;
+  opacity: 0.65;
+}
+.club-seg-btn:hover:not(.active) {
+  color: var(--fg, #e2e8f0);
+  background: rgba(var(--lemon-rgb), 0.07);
+}
+.club-seg-btn.active {
+  color: #0d1a02;
+  background: linear-gradient(135deg, #a3e635, #84cc16);
+  box-shadow: 0 2px 10px rgba(var(--lemon-rgb), 0.40), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.club-seg-btn.active i {
+  opacity: 1;
+}
+.club-seg-panels {
+  min-height: 0;
+}
+.club-seg-panel {
+  display: none;
+}
+.club-seg-panel.active {
+  display: block;
+  animation: clubSegFade 0.2s ease;
+}
+@keyframes clubSegFade {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .club-hero {
   background: linear-gradient(135deg, rgba(var(--lemon-rgb),0.07) 0%, rgba(var(--blue-rgb),0.07) 100%);
   border: 1px solid rgba(var(--lemon-rgb),0.18);

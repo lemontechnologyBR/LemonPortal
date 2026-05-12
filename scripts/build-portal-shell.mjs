@@ -41,10 +41,12 @@ import {
 } from './modules/format-ui.js';
 import {
   gerarPixMP,
+  fecharFormPagamentoCartaoFatura,
   fecharFormAssinaturaMP,
+  abrirFormPagamentoCartaoFatura,
   abrirFormAssinaturaMP,
+  confirmarPagamentoCartaoFatura,
   confirmarAssinaturaComToken,
-  assinaturaMercadoPagoHosted,
   preencherCarteiraMpAviso,
   _mpCriarCardToken,
 } from './modules/mercadopago.js';
@@ -54,7 +56,6 @@ import {
   iniciarSpeedTest,
   limparHistoricoSpeed,
   navToVelocidade,
-  wireSpeedtestMissions,
 } from './modules/connection-speed.js';
 import {
   missaoVisita,

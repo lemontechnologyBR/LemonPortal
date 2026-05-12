@@ -30,7 +30,10 @@ services:
       - EVO_URL=${EVO_URL}
       - EVO_INSTANCE=${EVO_INSTANCE}
       - EVO_APIKEY=${EVO_APIKEY}
-      - WATCH_ENABLED=${WATCH_ENABLED}
+      # Juros mora no portal: % ao dia sobre valor do título após vencimento (use 0 para desligar).
+      - FATURA_JUROS_POR_DIA_PERCENT=${FATURA_JUROS_POR_DIA_PERCENT:-1}
+      # Watch TV — desligado até reativar no .env / constants
+      - WATCH_ENABLED=${WATCH_ENABLED:-false}
       - WATCH_BASE_URI=${WATCH_BASE_URI}
       - WATCH_AUTH_URI=${WATCH_AUTH_URI}
       - WATCH_TOKEN_URI=${WATCH_TOKEN_URI}

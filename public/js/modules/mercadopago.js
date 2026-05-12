@@ -3,8 +3,18 @@
  */
 import { API, MP_LOGO_IMG } from './constants.js';
 import { S, app } from './state.js';
+import { faturaValorMercadoPago, faturaValorTotalCobrancaPortal } from './faturas.js';
 import { request } from './http.js';
 import { fmt, closeModalDirect } from './format-ui.js';
+
+/** Pagamento único da fatura no cartão → backend → MP POST /v1/payments */
+const MP_API_FATURA_CARTAO = `${API}/pagamento/fatura/cartao`;
+
+/** Mesmo visual dos outros campos do formulário (evita depender só do CSS externo / cache). */
+const _MP_SUB_FIELD_STYLE =
+  'width:100%;min-width:0;box-sizing:border-box;margin:0;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;font-family:inherit;line-height:1.3;-webkit-appearance:none;appearance:none';
+const _MP_SUB_EXPIRY_ROW_STYLE =
+  'display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);gap:8px;margin-bottom:8px;width:100%;min-width:0;box-sizing:border-box;align-items:stretch';
 
 function _carteiraBrandLabel(pmId) {
   const id = String(pmId || '').toUpperCase();
@@ -222,7 +232,7 @@ export async function preencherCarteiraMpAviso() {
   }
 }
 
-export function fecharFormAssinaturaMP() {
+export function fecharFormPagamentoCartaoFatura() {
   const box = document.getElementById('mp-sub-content');
   const btn = document.getElementById('btn-mp-sub');
   const pix = document.getElementById('btn-mp-pix');
@@ -252,7 +262,13 @@ function _mpSubUnmountCvv() {
 async function _mpSubMountCvv(mp) {
   const mountId = 'mp-sub-cvv-mount';
   const el = document.getElementById(mountId);
-  if (!el || !mp?.fields?.create) return;
+  if (!el || !mp?.fields?.create) {
+    if (el) {
+      el.innerHTML = `<input type="text" id="mp-sub-cvv-fallback" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" style="width:100%;padding:8px;border:none;font-size:15px;font-weight:500;color:#141824;outline:none;background:transparent" />`;
+      if (S.mpSubCtx) S.mpSubCtx._cvvFallback = true;
+    }
+    return;
+  }
   _mpSubUnmountCvv();
   try {
     const sc = mp.fields.create('securityCode', {
@@ -275,18 +291,21 @@ async function _mpSubMountCvv(mp) {
         if (typeof sc.unmount === 'function') sc.unmount();
       } catch (_) {}
     };
+    if (S.mpSubCtx) S.mpSubCtx._cvvFallback = false;
   } catch (e) {
     console.warn('[MP] Campo CVV (cartão salvo):', e);
+    el.innerHTML = `<input type="text" id="mp-sub-cvv-fallback" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" style="width:100%;padding:8px;border:none;font-size:15px;font-weight:500;color:#141824;outline:none;background:transparent" />`;
+    if (S.mpSubCtx) S.mpSubCtx._cvvFallback = true;
   }
 }
 
-export async function abrirFormAssinaturaMP(tituloUuid, valor, descricao) {
+export async function abrirFormPagamentoCartaoFatura(tituloUuid, valor, descricao) {
   const box = document.getElementById('mp-sub-content');
   const btn = document.getElementById('btn-mp-sub');
   const pix = document.getElementById('btn-mp-pix');
   if (!box) return;
   if (box.style.display === 'block' && tituloUuid && S.mpSubCtx?.tituloUuid === tituloUuid) {
-    fecharFormAssinaturaMP();
+    fecharFormPagamentoCartaoFatura();
     return;
   }
   const cpfCliente =
@@ -337,14 +356,14 @@ export async function abrirFormAssinaturaMP(tituloUuid, valor, descricao) {
 
   const novoBlock = `<div id="mp-sub-novo-block" style="display:${saved.length ? 'none' : 'block'}">
       <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:10px;line-height:1.45">Cobrança imediata do valor desta fatura no cartão (não é só verificação).</div>
-      <input type="text" id="mp-sub-nome" placeholder="Nome impresso no cartão" autocomplete="cc-name" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-      <input type="text" id="mp-sub-num" placeholder="Número do cartão" inputmode="numeric" autocomplete="cc-number" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
-        <input type="text" id="mp-sub-mes" placeholder="MM" maxlength="2" inputmode="numeric" autocomplete="cc-exp-month" style="padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-        <input type="text" id="mp-sub-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" autocomplete="cc-exp-year" style="padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
-        <input type="text" id="mp-sub-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" style="padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
+      <input type="text" id="mp-sub-nome" placeholder="Nome impresso no cartão" autocomplete="cc-name" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;box-sizing:border-box;-webkit-appearance:none;appearance:none" />
+      <input type="text" id="mp-sub-num" placeholder="Número do cartão" inputmode="numeric" autocomplete="cc-number" style="width:100%;margin-bottom:8px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;box-sizing:border-box;-webkit-appearance:none;appearance:none" />
+      <div class="mp-sub-expiry-row" style="${_MP_SUB_EXPIRY_ROW_STYLE}">
+        <input type="text" id="mp-sub-mes" placeholder="MM" maxlength="2" inputmode="numeric" autocomplete="cc-exp-month" style="${_MP_SUB_FIELD_STYLE}" />
+        <input type="text" id="mp-sub-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" autocomplete="cc-exp-year" style="${_MP_SUB_FIELD_STYLE}" />
+        <input type="text" id="mp-sub-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" autocomplete="cc-csc" style="${_MP_SUB_FIELD_STYLE}" />
       </div>
-      <input type="text" id="mp-sub-cpf" placeholder="CPF do titular" value="${cpfCliente}" inputmode="numeric" style="width:100%;margin-bottom:12px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem" />
+      <input type="text" id="mp-sub-cpf" placeholder="CPF do titular" value="${cpfCliente}" inputmode="numeric" style="width:100%;margin-bottom:12px;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:#fff;color:var(--text);font-size:.85rem;box-sizing:border-box;-webkit-appearance:none;appearance:none" />
       ${saved.length ? `<button type="button" id="mp-sub-show-saved" style="width:100%;background:transparent;border:none;color:var(--lemon-dark);font-size:.78rem;font-weight:600;cursor:pointer;margin-bottom:10px;text-decoration:underline">Voltar ao cartão da carteira</button>` : ''}
     </div>`;
 
@@ -357,10 +376,10 @@ export async function abrirFormAssinaturaMP(tituloUuid, valor, descricao) {
       <button type="button" id="mp-sub-confirm" class="btn btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,#009ee3,#007ab8);color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700">
         Pagar com cartão
       </button>
-      <button type="button" onclick="fecharFormAssinaturaMP()" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-muted);font-size:.72rem;font-weight:600;cursor:pointer">Cancelar</button>
+      <button type="button" onclick="fecharFormPagamentoCartaoFatura()" style="width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-muted);font-size:.72rem;font-weight:600;cursor:pointer">Cancelar</button>
     </div>`;
 
-  document.getElementById('mp-sub-confirm').onclick = () => confirmarAssinaturaComToken();
+  document.getElementById('mp-sub-confirm').onclick = () => confirmarPagamentoCartaoFatura();
 
   if (saved.length) {
     document.getElementById('mp-sub-show-novo').onclick = () => {
@@ -401,43 +420,124 @@ export async function abrirFormAssinaturaMP(tituloUuid, valor, descricao) {
 
 const _mpBtnCartaoLabel = 'Pagar com cartão';
 
+function _mpMostrarErroCartao(msg) {
+  const box = document.getElementById('mp-sub-content');
+  const panel = box?.querySelector('.mp-sub-panel');
+  const container = panel || box;
+  if (!container) { alert(msg); return; }
+  let errEl = container.querySelector('#mp-cartao-erro');
+  if (!errEl) {
+    errEl = document.createElement('div');
+    errEl.id = 'mp-cartao-erro';
+    errEl.style.cssText = 'margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);display:flex;align-items:flex-start;gap:10px;font-size:.82rem;color:#b91c1c;line-height:1.5';
+    const confirmBtn = container.querySelector('#mp-sub-confirm');
+    if (confirmBtn) confirmBtn.insertAdjacentElement('afterend', errEl);
+    else container.appendChild(errEl);
+  }
+  errEl.innerHTML = `<i class="fa-solid fa-circle-xmark" style="margin-top:2px;flex-shrink:0;color:#ef4444"></i><span>${msg}</span>`;
+  errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 async function _mpFinalizarCartaoPortal(resposta, tituloUuid, valor, cbtn) {
   const { mpId, status, pollBaixa, valor: vServ } = resposta;
   const valorNum = vServ != null ? parseFloat(vServ) : parseFloat(valor);
 
+  const _showSuccess = (msg) => {
+    if (typeof app.showToast === 'function') app.showToast(msg, 'success');
+    else if (typeof window.showToast === 'function') window.showToast(msg, 'success');
+    else alert(msg);
+  };
+  const _showWarn = (msg) => {
+    if (typeof app.showToast === 'function') app.showToast(msg, 'info');
+    else if (typeof window.showToast === 'function') window.showToast(msg, 'info');
+    else alert(msg);
+  };
+
   if (status === 'approved' && mpId) {
     try {
-      await request('POST', `${API}/pagamento/baixa`, {
-        mpId,
-        tituloUuid,
-        valor: valorNum,
-      });
+      await request('POST', `${API}/pagamento/baixa`, { mpId, tituloUuid, valor: valorNum });
     } catch (e) {
       console.warn(e);
     }
-    alert('Pagamento no cartão aprovado! Sua fatura foi baixada.');
-    if (cbtn) {
-      cbtn.disabled = false;
-      cbtn.textContent = _mpBtnCartaoLabel;
-    }
+    _showSuccess('Pagamento aprovado! Sua fatura foi baixada.');
+    if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
     closeModalDirect();
     _refreshFaturas();
     return;
   }
 
   if (pollBaixa && mpId) {
-    if (cbtn) cbtn.textContent = 'Aguardando confirmação...';
+    if (cbtn) {
+      cbtn.disabled = true;
+      cbtn.textContent = 'Aguardando confirmação...';
+    }
+    const box = document.getElementById('mp-sub-content');
+    const panel = box?.querySelector('.mp-sub-panel');
+    const container = panel || box;
+    let statusEl = container?.querySelector('#mp-cartao-polling-status');
+    if (!statusEl && container) {
+      statusEl = document.createElement('div');
+      statusEl.id = 'mp-cartao-polling-status';
+      statusEl.style.cssText = 'margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);display:flex;align-items:center;gap:10px;font-size:.82rem;color:#92400e;line-height:1.5';
+      const confirmBtn = container.querySelector('#mp-sub-confirm');
+      if (confirmBtn) confirmBtn.insertAdjacentElement('afterend', statusEl);
+      else container.appendChild(statusEl);
+    }
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(251,191,36,.3);border-top-color:#d97706;flex-shrink:0"></div><span>Pagamento em análise pelo banco. Verificando automaticamente...</span>';
+    }
+
     let tentativas = 0;
     const maxT = 90;
     const tick = async () => {
       tentativas += 1;
       if (tentativas > maxT) {
-        if (cbtn) {
-          cbtn.disabled = false;
-          cbtn.textContent = _mpBtnCartaoLabel;
+        if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
+        if (statusEl) {
+          statusEl.style.background = 'rgba(99,102,241,.08)';
+          statusEl.style.borderColor = 'rgba(99,102,241,.25)';
+          statusEl.style.color = '#3730a3';
+          statusEl.innerHTML = `
+            <i class="fa-solid fa-clock" style="flex-shrink:0"></i>
+            <div style="flex:1">
+              <div style="font-weight:600;margin-bottom:4px">Pagamento em análise</div>
+              <div style="font-size:.75rem;opacity:.85">O banco ainda está processando. Sua fatura será baixada automaticamente quando confirmar.</div>
+              <button type="button" id="mp-cartao-retry-poll" style="margin-top:8px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:6px 14px;font-size:.75rem;font-weight:600;color:#4338ca;cursor:pointer">Verificar novamente</button>
+            </div>`;
+          const retryBtn = statusEl.querySelector('#mp-cartao-retry-poll');
+          if (retryBtn) {
+            retryBtn.onclick = async () => {
+              retryBtn.disabled = true;
+              retryBtn.textContent = 'Verificando...';
+              try {
+                const st = await request('GET', `${API}/pagamento/status/${mpId}`);
+                if (st.status === 'approved') {
+                  try { await request('POST', `${API}/pagamento/baixa`, { mpId, tituloUuid: st.external_reference || tituloUuid, valor: st.valor != null ? st.valor : valorNum }); } catch (_) {}
+                  _showSuccess('Pagamento aprovado! Sua fatura foi baixada.');
+                  closeModalDirect();
+                  _refreshFaturas();
+                  return;
+                }
+                if (st.status === 'rejected' || st.status === 'cancelled') {
+                  _mpMostrarErroCartao('Pagamento recusado ou cancelado pelo banco. Tente outro cartão ou use o PIX.');
+                  if (statusEl) statusEl.remove();
+                  return;
+                }
+                retryBtn.disabled = false;
+                retryBtn.textContent = 'Verificar novamente';
+                _showWarn('Ainda em análise. Tente novamente em alguns instantes.');
+              } catch (_) {
+                retryBtn.disabled = false;
+                retryBtn.textContent = 'Verificar novamente';
+              }
+            };
+          }
         }
-        alert('O pagamento ainda está em análise. Atualize a lista de faturas em alguns minutos.');
         return;
+      }
+      if (statusEl && tentativas % 8 === 0) {
+        const segs = Math.round((maxT - tentativas) * 4);
+        statusEl.querySelector('span').textContent = `Pagamento em análise pelo banco. Verificando... (~${segs}s restantes)`;
       }
       try {
         const st = await request('GET', `${API}/pagamento/status/${mpId}`);
@@ -448,24 +548,18 @@ async function _mpFinalizarCartaoPortal(resposta, tituloUuid, valor, cbtn) {
               tituloUuid: st.external_reference || tituloUuid,
               valor: st.valor != null ? st.valor : valorNum,
             });
-          } catch (e) {
-            console.warn(e);
-          }
-          alert('Pagamento no cartão aprovado! Sua fatura foi baixada.');
-          if (cbtn) {
-            cbtn.disabled = false;
-            cbtn.textContent = _mpBtnCartaoLabel;
-          }
+          } catch (e) { console.warn(e); }
+          _showSuccess('Pagamento aprovado! Sua fatura foi baixada.');
+          if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
+          if (statusEl) statusEl.remove();
           closeModalDirect();
           _refreshFaturas();
           return;
         }
         if (st.status === 'rejected' || st.status === 'cancelled') {
-          if (cbtn) {
-            cbtn.disabled = false;
-            cbtn.textContent = _mpBtnCartaoLabel;
-          }
-          alert('Pagamento recusado ou cancelado.');
+          if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
+          if (statusEl) statusEl.remove();
+          _mpMostrarErroCartao('Pagamento recusado ou cancelado pelo banco. Tente outro cartão ou use o PIX.');
           return;
         }
       } catch (_) {}
@@ -478,7 +572,7 @@ async function _mpFinalizarCartaoPortal(resposta, tituloUuid, valor, cbtn) {
   throw new Error('Resposta inesperada do servidor');
 }
 
-export async function confirmarAssinaturaComToken() {
+export async function confirmarPagamentoCartaoFatura() {
   if (!S.mpSubCtx) return;
   const { tituloUuid, valor, descricao, mp, savedCards, publicKey } = S.mpSubCtx;
   const flow = document.getElementById('mp-sub-flow')?.value || 'novo';
@@ -487,12 +581,13 @@ export async function confirmarAssinaturaComToken() {
   try {
     const cfgChk = await request('GET', `${API}/pagamento/config`);
     if (cfgChk.chavesAlinhadas === false) {
-      alert(cfgChk.dica || 'Credenciais Mercado Pago inconsistentes.');
+      _mpMostrarErroCartao(cfgChk.dica || 'Credenciais Mercado Pago inconsistentes. Contate o suporte.');
+      if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
       return;
     }
   } catch (_) {}
 
-  if (flow === 'saved' && savedCards?.length && mp?.fields?.createCardToken) {
+  if (flow === 'saved' && savedCards?.length) {
     const sel = document.querySelector('input[name="mp-sub-card"]:checked');
     const cardId = sel?.value?.trim();
     if (!cardId) {
@@ -505,29 +600,58 @@ export async function confirmarAssinaturaComToken() {
       alert('Cartão sem vínculo ao cliente no Mercado Pago. Remova-o da carteira e cadastre de novo.');
       return;
     }
+
+    const useFallback = S.mpSubCtx?._cvvFallback || !mp?.fields?.createCardToken;
+    if (useFallback) {
+      const cvvInput = document.getElementById('mp-sub-cvv-fallback');
+      const cvvVal = (cvvInput?.value || '').replace(/\D/g, '');
+      if (!cvvVal || cvvVal.length < 3) {
+        _mpMostrarErroCartao('Informe o CVV (código de segurança) do cartão.');
+        return;
+      }
+    }
+
     if (cbtn) {
       cbtn.disabled = true;
       cbtn.textContent = 'Processando...';
     }
     try {
-      let tokenOut;
-      try {
-        tokenOut = await mp.fields.createCardToken({ cardId, customerId: mpCustomerId });
-      } catch (e1) {
+      let cardToken;
+      if (useFallback) {
+        const cvvInput = document.getElementById('mp-sub-cvv-fallback');
+        const cvvVal = (cvvInput?.value || '').replace(/\D/g, '');
+        const pub = publicKey || (await request('GET', `${API}/pagamento/config`)).publicKey;
+        if (!pub) throw new Error('Public Key do Mercado Pago não configurada no servidor.');
+        const r = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${encodeURIComponent(pub)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ card_id: cardId, security_code: cvvVal }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.message || j.cause?.[0]?.description || 'Não foi possível validar o CVV. Verifique e tente de novo.');
+        cardToken = j.id;
+        if (!cardToken) throw new Error('Falha ao gerar token do cartão. Tente a opção "Usar outro cartão".');
+      } else {
+        let tokenOut;
         try {
-          tokenOut = await mp.fields.createCardToken({ cardId, customer_id: mpCustomerId });
-        } catch (e2) {
-          throw new Error((e1 && e1.message) || (e2 && e2.message) || 'Informe o CVV no campo acima e tente de novo.');
+          tokenOut = await mp.fields.createCardToken({ cardId, customerId: mpCustomerId });
+        } catch (e1) {
+          try {
+            tokenOut = await mp.fields.createCardToken({ cardId, customer_id: mpCustomerId });
+          } catch (e2) {
+            throw new Error((e1 && e1.message) || (e2 && e2.message) || 'Informe o CVV no campo acima e tente de novo.');
+          }
         }
+        cardToken = tokenOut?.id || tokenOut?.token;
+        if (!cardToken) throw new Error('Não foi possível gerar o token do cartão. Verifique o CVV.');
       }
-      const cardToken = tokenOut?.id || tokenOut?.token;
-      if (!cardToken) throw new Error('Não foi possível gerar o token do cartão salvo.');
-      const res = await request('POST', `${API}/mp/assinatura`, {
+      const res = await request('POST', MP_API_FATURA_CARTAO, {
         tituloUuid,
         valor,
         descricao,
         cardToken,
         mpCustomerId,
+        mpCardId: cardId,
       });
       if (res.ok && (res.modo === 'pagamento_cartao' || res.modo === 'pagamento_cartao_pendente')) {
         await _mpFinalizarCartaoPortal(res, tituloUuid, valor, cbtn);
@@ -535,11 +659,8 @@ export async function confirmarAssinaturaComToken() {
       }
       throw new Error('Resposta inesperada do servidor');
     } catch (e) {
-      alert(e.message || 'Não foi possível concluir o pagamento no cartão.');
-      if (cbtn) {
-        cbtn.disabled = false;
-        cbtn.textContent = _mpBtnCartaoLabel;
-      }
+      _mpMostrarErroCartao(e.message || 'Não foi possível concluir o pagamento no cartão.');
+      if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
     }
     return;
   }
@@ -562,23 +683,68 @@ export async function confirmarAssinaturaComToken() {
     const pub = publicKey || (await request('GET', `${API}/pagamento/config`)).publicKey;
     if (!pub) throw new Error('Public Key do Mercado Pago não configurada no servidor.');
     const cardToken = await _mpCriarCardToken(pub, { nome, numero, mes, ano, cvv, cpf });
-    const res = await request('POST', `${API}/mp/assinatura`, { tituloUuid, valor, descricao, cardToken });
+    const res = await request('POST', MP_API_FATURA_CARTAO, { tituloUuid, valor, descricao, cardToken });
     if (res.ok && (res.modo === 'pagamento_cartao' || res.modo === 'pagamento_cartao_pendente')) {
       await _mpFinalizarCartaoPortal(res, tituloUuid, valor, cbtn);
       return;
     }
     throw new Error('Resposta inesperada do servidor');
   } catch (e) {
-    alert(e.message || 'Não foi possível concluir o pagamento no cartão.');
-    if (cbtn) {
-      cbtn.disabled = false;
-      cbtn.textContent = _mpBtnCartaoLabel;
-    }
+    _mpMostrarErroCartao(e.message || 'Não foi possível concluir o pagamento no cartão.');
+    if (cbtn) { cbtn.disabled = false; cbtn.textContent = _mpBtnCartaoLabel; }
   }
 }
 
-export async function assinaturaMercadoPagoHosted(tituloUuid, valor, descricao) {
-  const res = await request('POST', `${API}/mp/assinatura`, { tituloUuid, valor, descricao, hostedCheckout: true });
-  if (res.initPoint) window.location.href = res.initPoint;
-  else throw new Error('Link não retornado');
+/**
+ * Antes de cobrar: GET /faturas/:uuid (reconcilia Lemon Club no servidor) para o valor bater com o backend.
+ */
+export async function pagarPixFaturaComValorAtualizado(tituloUuid, descricao) {
+  const uuid = String(tituloUuid || '').trim();
+  if (!uuid) return;
+  try {
+    const t = await request('GET', `${API}/faturas/${encodeURIComponent(uuid)}`);
+    const isPago = t.status === 'pago' || !!t.valorpag;
+    if (isPago) {
+      const m = 'Esta fatura já está paga.';
+      if (typeof app.showToast === 'function') app.showToast(m, 'info');
+      else alert(m);
+      return;
+    }
+    const valor = faturaValorTotalCobrancaPortal(t, false);
+    if (!Number.isFinite(valor) || valor < 0) throw new Error('Valor da fatura indisponível. Atualize a lista.');
+    await gerarPixMP(uuid, valor, descricao);
+  } catch (e) {
+    const msg = e.message || 'Não foi possível iniciar o pagamento.';
+    if (typeof app.showToast === 'function') app.showToast(msg, 'error');
+    else if (typeof window.showToast === 'function') window.showToast(msg, 'error');
+    else alert(msg);
+  }
 }
+
+export async function abrirCartaoFaturaComValorAtualizado(tituloUuid, descricao) {
+  const uuid = String(tituloUuid || '').trim();
+  if (!uuid) return;
+  try {
+    const t = await request('GET', `${API}/faturas/${encodeURIComponent(uuid)}`);
+    const isPago = t.status === 'pago' || !!t.valorpag;
+    if (isPago) {
+      const m = 'Esta fatura já está paga.';
+      if (typeof app.showToast === 'function') app.showToast(m, 'info');
+      else alert(m);
+      return;
+    }
+    const valor = faturaValorTotalCobrancaPortal(t, false);
+    if (!Number.isFinite(valor) || valor < 0) throw new Error('Valor da fatura indisponível. Atualize a lista.');
+    await abrirFormPagamentoCartaoFatura(uuid, valor, descricao);
+  } catch (e) {
+    const msg = e.message || 'Não foi possível abrir o pagamento.';
+    if (typeof app.showToast === 'function') app.showToast(msg, 'error');
+    else if (typeof window.showToast === 'function') window.showToast(msg, 'error');
+    else alert(msg);
+  }
+}
+
+/** Nomes antigos — mantidos para compatibilidade com onclick/HTML e integrações. */
+export const fecharFormAssinaturaMP = fecharFormPagamentoCartaoFatura;
+export const abrirFormAssinaturaMP = abrirFormPagamentoCartaoFatura;
+export const confirmarAssinaturaComToken = confirmarPagamentoCartaoFatura;

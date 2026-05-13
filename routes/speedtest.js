@@ -5,7 +5,7 @@ const ST_CHUNK_SIZE = 131072; // 128KB por chunk
 const speedChunk = crypto.randomBytes(ST_CHUNK_SIZE);
 
 // Limite máximo de MB por pedido de download (proteção contra abuso)
-const ST_MAX_DL_MB = 100;
+const ST_MAX_DL_MB = 150;
 // Limite máximo de bytes aceitos num upload (1 GB)
 const ST_MAX_UL_BYTES = 1024 * 1024 * 1024;
 // Timeout máximo por upload (120 s)

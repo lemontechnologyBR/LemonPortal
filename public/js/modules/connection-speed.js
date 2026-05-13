@@ -123,39 +123,69 @@ function animateSpeed(from, to, duration, onUpdate) {
   requestAnimationFrame(step);
 }
 
-async function medirPing(amostras = 8) {
+// ── Helpers de medição estável (estilo Speedtest.net) ─────────────────────────
+
+/** Percentil p (0–1) de um array já ordenado ou desordenado. */
+function percentil(arr, p) {
+  if (!arr.length) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const idx = Math.max(0, Math.ceil(sorted.length * p) - 1);
+  return sorted[idx];
+}
+
+async function medirPing(amostras = 12) {
+  // Descarta o primeiro (TCP cold start) e usa mediana + jitter das restantes
   const tempos = [];
   for (let i = 0; i < amostras; i++) {
     const t0 = performance.now();
     await fetch('/speedtest/ping?t=' + Date.now(), { cache: 'no-store' });
     tempos.push(performance.now() - t0);
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 40));
   }
-  const sorted = [...tempos].sort((a, b) => a - b);
+  const useful = tempos.slice(1); // descarta 1ª medição (cold)
+  const sorted = [...useful].sort((a, b) => a - b);
   const ping = Math.round(sorted[Math.floor(sorted.length / 2)]);
   let jitter = 0;
-  for (let i = 1; i < tempos.length; i++) jitter += Math.abs(tempos[i] - tempos[i - 1]);
-  jitter = Math.round(jitter / (tempos.length - 1));
+  for (let i = 1; i < useful.length; i++) jitter += Math.abs(useful[i] - useful[i - 1]);
+  jitter = Math.round(jitter / (useful.length - 1));
   return { ping, jitter };
 }
 
 async function medirDownload(onRate) {
-  const STREAMS = 4;
-  const MB_EACH = 20;
-  let totalBytes = 0;
+  const STREAMS   = 4;
+  const MB_EACH   = 25;
+  const WARMUP_MS = 2000; // descarta primeiros 2 s (TCP slow start)
+  const SAMPLE_MS = 200;  // janela de amostragem
+
+  // Amostras de taxa instantânea (Mbps) pós-warmup
+  const amostras = [];
+  let totalBytes  = 0;
+  let warmupDone  = false;
+  let bytesNoWarmup = 0;
   const t0 = performance.now();
-  let lastTs = t0;
-  let lastBytes = 0;
+  let lastSampleTs    = t0;
+  let lastSampleBytes = 0;
 
   function onChunk(size) {
     totalBytes += size;
     const now = performance.now();
-    const dt = (now - lastTs) / 1000;
-    if (dt >= 0.12) {
-      const rate = ((totalBytes - lastBytes) * 8) / dt / 1e6;
-      lastTs = now;
-      lastBytes = totalBytes;
-      onRate(Math.max(0, rate));
+
+    if (!warmupDone && now - t0 >= WARMUP_MS) {
+      warmupDone     = true;
+      bytesNoWarmup  = totalBytes;
+      lastSampleTs   = now;
+      lastSampleBytes = totalBytes;
+    }
+
+    const dt = now - lastSampleTs;
+    if (dt >= SAMPLE_MS) {
+      const rate = ((totalBytes - lastSampleBytes) * 8) / (dt / 1000) / 1e6;
+      if (rate > 0) {
+        if (warmupDone) amostras.push(rate);
+        onRate(Math.max(0, rate));
+      }
+      lastSampleTs    = now;
+      lastSampleBytes = totalBytes;
     }
   }
 
@@ -170,6 +200,10 @@ async function medirDownload(onRate) {
   }
 
   await Promise.all(Array.from({ length: STREAMS }, doStream));
+
+  // Resultado: percentil 90 das amostras pós-warmup (igual ao Speedtest.net)
+  if (amostras.length >= 4) return percentil(amostras, 0.9);
+  // Fallback: média simples se poucos dados
   const elapsed = (performance.now() - t0) / 1000;
   return (totalBytes * 8) / elapsed / 1e6;
 }
@@ -180,19 +214,27 @@ function xhrUploadStream(data, onRate) {
     const t0 = performance.now();
     let lastLoaded = 0;
     let lastTs = t0;
+    const SAMPLE_MS = 200;
+    const WARMUP_MS = 1500;
+    const amostras  = [];
 
     xhr.upload.onprogress = e => {
       const now = performance.now();
-      const dt = (now - lastTs) / 1000;
-      if (dt >= 0.15 && e.loaded > lastLoaded) {
-        const rate = ((e.loaded - lastLoaded) * 8) / dt / 1e6;
+      const dt  = now - lastTs;
+      if (dt >= SAMPLE_MS && e.loaded > lastLoaded) {
+        const rate = ((e.loaded - lastLoaded) * 8) / (dt / 1000) / 1e6;
+        if (now - t0 > WARMUP_MS && rate > 0) amostras.push(rate);
         lastLoaded = e.loaded;
-        lastTs = now;
-        onRate(Math.max(0, rate));
+        lastTs     = now;
+        onRate(Math.max(0, rate), amostras);
       }
     };
 
-    xhr.onload = () => resolve({ bytes: data.byteLength, elapsed: (performance.now() - t0) / 1000 });
+    xhr.onload = () => resolve({
+      bytes:    data.byteLength,
+      elapsed:  (performance.now() - t0) / 1000,
+      amostras,
+    });
     xhr.onerror = reject;
     xhr.open('POST', '/speedtest/upload?t=' + Date.now());
     xhr.send(data);
@@ -201,25 +243,27 @@ function xhrUploadStream(data, onRate) {
 
 async function medirUpload(onRate) {
   const STREAMS = 3;
-  const MB_EACH = 10;
-  const chunk = new Uint8Array(MB_EACH * 1024 * 1024);
-  const rates = new Array(STREAMS).fill(0);
-  function onStreamRate(idx, rate) {
+  const MB_EACH = 12;
+  const chunk   = new Uint8Array(MB_EACH * 1024 * 1024);
+  const rates   = new Array(STREAMS).fill(0);
+  const todasAmostras = [];
+
+  function onStreamRate(idx, rate, amostras) {
     rates[idx] = rate;
+    todasAmostras.push(...(amostras || []));
     onRate(rates.reduce((a, b) => a + b, 0));
   }
-  let totalBytes = 0;
-  const t0 = performance.now();
+
   await Promise.all(
     Array.from({ length: STREAMS }, (_, i) =>
-      xhrUploadStream(chunk.slice(), rate => onStreamRate(i, rate)).then(r => {
-        totalBytes += r.bytes;
-        return r;
-      }),
+      xhrUploadStream(chunk.slice(), (rate, am) => onStreamRate(i, rate, am)),
     ),
   );
-  const elapsed = (performance.now() - t0) / 1000;
-  return (totalBytes * 8) / elapsed / 1e6;
+
+  // Percentil 90 das amostras pós-warmup
+  if (todasAmostras.length >= 4) return percentil(todasAmostras, 0.9);
+  // Fallback: soma das médias por stream
+  return rates.reduce((a, b) => a + b, 0);
 }
 
 export async function iniciarSpeedTest() {
@@ -272,16 +316,19 @@ export async function iniciarSpeedTest() {
     document.getElementById('res-jitter').textContent = jitterMs;
     pFill.style.width = '15%';
 
-    phase.textContent = 'Testando download... (4 streams)';
+    phase.textContent = 'Aquecendo download...';
     unit.textContent = 'Mbps ↓';
     disp.textContent = '0.0';
     pFill.style.width = '20%';
 
+    let dlPeak = 0;
     dlMbps = await medirDownload(rate => {
+      if (rate > dlPeak) dlPeak = rate;
       disp.textContent = rate.toFixed(1);
       setGauge(rate / S.gaugeMax);
       const prog = 20 + Math.min((rate / S.gaugeMax) * 45, 45);
       pFill.style.width = prog + '%';
+      if (phase.textContent === 'Aquecendo download...') phase.textContent = 'Testando download...';
     });
 
     await new Promise(r => {
@@ -296,7 +343,7 @@ export async function iniciarSpeedTest() {
 
     await new Promise(r => setTimeout(r, 400));
 
-    phase.textContent = 'Testando upload... (3 streams)';
+    phase.textContent = 'Aquecendo upload...';
     unit.textContent = 'Mbps ↑';
     disp.textContent = '0.0';
     setGauge(0);
@@ -307,6 +354,7 @@ export async function iniciarSpeedTest() {
       setGauge(rate / S.gaugeMax);
       const prog = 68 + Math.min((rate / S.gaugeMax) * 27, 27);
       pFill.style.width = prog + '%';
+      if (phase.textContent === 'Aquecendo upload...') phase.textContent = 'Testando upload...';
     });
 
     await new Promise(r => {
@@ -338,36 +386,24 @@ export async function iniciarSpeedTest() {
           ping: pingMs,
           planSpeed: getPlanSpeed() || 0,
         });
+        // Aquece o cache com todas as missões já concluídas
         if (stRes.missoesConcluidas) {
           stRes.missoesConcluidas.forEach(id => cacheMissao(id));
         }
-        const missoesSpeedtest = [
-          'speedtest',
-          'speedtest_3x',
-          'speedtest_5x',
-          'speedtest_10x',
-          'speedtest_manha',
-          'speedtest_noite',
-          'speedtest_100',
-          'speedtest_excelente',
-          'speedtest_semana',
-        ];
-        const m = {
-          speedtest: 'Primeiro teste!',
-          speedtest_3x: '3 testes!',
-          speedtest_5x: '5 testes!',
-          speedtest_10x: '10 testes!',
-          speedtest_manha: 'Teste matinal!',
-          speedtest_noite: 'Teste noturno!',
-          speedtest_100: 'Velocidade máxima!',
-          speedtest_excelente: 'Velocidade excelente!',
-          speedtest_semana: 'Testador assíduo!',
+        // Toasts APENAS para missões ganhas NESTE teste (novasMissoes)
+        const labelMissao = {
+          speedtest:          'Primeiro teste de velocidade!',
+          speedtest_3x:       '3 testes realizados!',
+          speedtest_5x:       '5 testes realizados!',
+          speedtest_10x:      '10 testes realizados!',
+          speedtest_manha:    'Teste matinal concluído!',
+          speedtest_noite:    'Teste noturno concluído!',
+          speedtest_100:      'Velocidade máxima atingida!',
+          speedtest_excelente:'Velocidade excelente!',
+          speedtest_semana:   'Testador assíduo!',
         };
-        for (const id of missoesSpeedtest) {
-          if (stRes.missoesConcluidas?.includes(id) && !missaoCacheHas(`${id}_notified`)) {
-            cacheMissao(`${id}_notified`);
-            if (m[id]) showToast(`+pts — Missão "${m[id]}" concluída! 🎯`, 'success');
-          }
+        for (const id of (stRes.novasMissoes || [])) {
+          if (labelMissao[id]) showToast(`+pts — Missão "${labelMissao[id]}" 🎯`, 'success');
         }
         if (stRes.pontos && stRes.novosPts > 0) {
           S.clubPontos = stRes.pontos;

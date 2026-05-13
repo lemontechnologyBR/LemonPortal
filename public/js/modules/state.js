@@ -12,14 +12,14 @@ export const S = {
   speedTesting: false,
   speedHistory: JSON.parse(localStorage.getItem('lemon_speed_hist') || '[]'),
   gaugeMax: 1000,
-  /** Missões já concluídas (cache local + speedtest). */
-  missaoCache: new Set(JSON.parse(sessionStorage.getItem('lemon_miss') || '[]')),
+  /** Missões já concluídas (cache local persistente entre sessões). */
+  missaoCache: new Set(JSON.parse(localStorage.getItem('lemon_miss') || '[]')),
   clubPontos: 0,
 };
 
 export function cacheMissao(tipo) {
   S.missaoCache.add(tipo);
-  sessionStorage.setItem('lemon_miss', JSON.stringify([...S.missaoCache]));
+  localStorage.setItem('lemon_miss', JSON.stringify([...S.missaoCache]));
 }
 
 export function missaoCacheHas(tipo) {

@@ -232,11 +232,13 @@ function registerClubeRoutes(app) {
     const temNoite = c.speedtests.some(t => t.hora >= 20 && t.hora <= 23);
 
     const ptsBefore = c.points || 0;
+    const novasMissoes = [];
     function autoST(id) {
       const m = MISSIONS[id];
       if (!m || (c.completedMissions || []).includes(id)) return;
       addPoints(db, login, m.pts, 'missao', `🎯 Missão: ${m.label}`);
       c.completedMissions.push(id);
+      novasMissoes.push(id); // só as ganhas NESTE teste
     }
 
     if (total >= 1)  autoST('speedtest');
@@ -259,7 +261,8 @@ function registerClubeRoutes(app) {
       success: true,
       novosPts,
       pontos: c.points,
-      missoesConcluidas: c.completedMissions,
+      novasMissoes,                       // só as ganhas neste teste
+      missoesConcluidas: c.completedMissions, // todas (para cache)
       totalTestes: total,
     });
   });

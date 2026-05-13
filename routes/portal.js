@@ -282,8 +282,22 @@ function registerPortalRoutes(app) {
 
   app.post('/portal/push/subscribe', requireAuth, (req, res) => {
     try {
-      pushLib.savePushSubscription(req.session.cliente.login, req.body, req.get('user-agent'));
+      const login = req.session.cliente.login;
+      pushLib.savePushSubscription(login, req.body, req.get('user-agent'));
       res.json({ success: true });
+      // Notificação de boas-vindas (evita iOS exibir "from Lemon" vazio)
+      setImmediate(() => {
+        const nome = (req.session.cliente.nome || '').split(' ')[0] || 'cliente';
+        pushLib.sendPushPayload(
+          { endpoint: req.body.endpoint, keys: { p256dh: req.body.keys?.p256dh, auth: req.body.keys?.auth } },
+          {
+            title: '🍋 Notificações ativadas!',
+            body: `Olá, ${nome}! Você receberá avisos de faturas e novidades da Lemon aqui.`,
+            url: '/',
+            kind: 'boas_vindas',
+          }
+        ).catch(() => {});
+      });
     } catch (e) {
       res.status(400).json({ error: e.message || 'Falha ao guardar subscrição.' });
     }

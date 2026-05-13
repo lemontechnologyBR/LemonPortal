@@ -1,4 +1,4 @@
-const CACHE = 'lemon-v99';
+const CACHE = 'lemon-v100';
 const ASSETS = [
   '/',
   '/css/style.css',

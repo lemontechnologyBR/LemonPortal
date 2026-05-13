@@ -278,6 +278,27 @@ async function logout() {
   document.getElementById('cpf-input').value = '';
 }
 
+async function _verificarEPedirPush() {
+  try {
+    if (!('Notification' in window) || !('PushManager' in window)) return;
+    if (Notification.permission === 'granted') return;
+    if (Notification.permission === 'denied') return;
+    const visto = localStorage.getItem('lemon_push_prompt_ts');
+    if (visto && Date.now() - Number(visto) < 24 * 60 * 60 * 1000) return;
+    const outroModal = document.querySelector('.modal-overlay:not(.hidden):not(#modal-push-notif)');
+    if (outroModal) return;
+    const modal = document.getElementById('modal-push-notif');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    localStorage.setItem('lemon_push_prompt_ts', String(Date.now()));
+    document.getElementById('btn-push-ativar').onclick = async () => {
+      modal.classList.add('hidden');
+      try { await ativarNotificacoes(); } catch (_) {}
+    };
+    document.getElementById('btn-push-depois').onclick = () => modal.classList.add('hidden');
+  } catch (_) {}
+}
+
 
 initOnboardingFormListeners();
 cham.initChamados();

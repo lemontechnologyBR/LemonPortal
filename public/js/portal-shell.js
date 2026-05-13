@@ -242,6 +242,9 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
       if (titulo) titulo.textContent = `Bem-vindo, ${primeiroNome}! 🎉`;
       setTimeout(() => mostrarBoasVindas(), 800);
     }
+
+    // Prompt de notificações push após login (se ainda não ativou)
+    setTimeout(() => _verificarEPedirPush(), 4000);
   } catch (err) {
     document.getElementById('login-error').textContent = err.message;
     document.getElementById('login-error').classList.remove('hidden');
@@ -249,6 +252,36 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
     btn.innerHTML = '<span>Entrar</span><i class="fa-solid fa-arrow-right"></i>';
   }
 });
+
+// ===== PROMPT PUSH NOTIFICATIONS =====
+
+async function _verificarEPedirPush() {
+  try {
+    // Não pede se: já concedido, já negado, não suportado, ou já viu o modal hoje
+    if (!('Notification' in window) || !('PushManager' in window)) return;
+    if (Notification.permission === 'granted') return;
+    if (Notification.permission === 'denied') return;
+    const visto = localStorage.getItem('lemon_push_prompt_ts');
+    if (visto && Date.now() - Number(visto) < 24 * 60 * 60 * 1000) return; // 1x por dia
+
+    // Só mostra se não tiver outro modal aberto
+    const outroModal = document.querySelector('.modal-overlay:not(.hidden):not(#modal-push-notif)');
+    if (outroModal) return;
+
+    const modal = document.getElementById('modal-push-notif');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    localStorage.setItem('lemon_push_prompt_ts', String(Date.now()));
+
+    document.getElementById('btn-push-ativar').onclick = async () => {
+      modal.classList.add('hidden');
+      try { await ativarNotificacoes(); } catch (_) {}
+    };
+    document.getElementById('btn-push-depois').onclick = () => {
+      modal.classList.add('hidden');
+    };
+  } catch (_) {}
+}
 
 // ===== LOGOUT =====
 

@@ -2489,6 +2489,32 @@
     </div>
   </div>
 
+  <!-- Modal: ativar notificações push -->
+  <div id="modal-push-notif" class="modal-overlay hidden" style="z-index:9998;backdrop-filter:blur(8px)">
+    <div class="modal" style="max-width:420px;padding:0;overflow:hidden;border:1px solid rgba(251,191,36,.25);box-shadow:0 0 60px rgba(251,191,36,.1)">
+      <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:32px 28px 24px;text-align:center;border-bottom:1px solid rgba(251,191,36,.15)">
+        <div style="font-size:3rem;margin-bottom:10px;filter:drop-shadow(0 0 16px rgba(251,191,36,.5))">🔔</div>
+        <h2 style="color:#fbbf24;font-size:1.3rem;font-weight:800;margin-bottom:6px">Ative as notificações!</h2>
+        <p style="color:rgba(255,255,255,.7);font-size:.875rem;line-height:1.5">Receba avisos de faturas, promoções e atualizações do seu plano direto no celular.</p>
+      </div>
+      <div style="padding:24px 28px">
+        <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+          <div style="font-size:2rem;flex-shrink:0">⭐</div>
+          <div>
+            <div style="font-weight:700;color:#fbbf24;font-size:.9rem">+15 pts no Lemon Club</div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px">Ative agora e complete a missão <strong>"Ativar notificações"</strong></div>
+          </div>
+        </div>
+        <button id="btn-push-ativar" style="width:100%;padding:13px;background:#fbbf24;color:#1a1a2e;border:none;border-radius:12px;font-size:.92rem;font-weight:800;cursor:pointer;margin-bottom:10px;transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+          <i class="fa-solid fa-bell" style="margin-right:6px"></i>Ativar notificações
+        </button>
+        <button id="btn-push-depois" style="width:100%;padding:9px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:10px;font-size:.8rem;cursor:pointer">
+          Agora não
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="overlay-loading" class="overlay-loading hidden">
     <div class="loading-box">
       <div class="spinner lg"></div>

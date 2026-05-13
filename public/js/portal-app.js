@@ -240,6 +240,8 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
       if (titulo) titulo.textContent = `Bem-vindo, ${primeiroNome}! 🎉`;
       setTimeout(() => mostrarBoasVindas(), 800);
     }
+    // Prompt push: 4s após login se ainda não ativou
+    setTimeout(() => _verificarEPedirPush(), 4000);
   } catch (err) {
     document.getElementById('login-error').textContent = err.message;
     document.getElementById('login-error').classList.remove('hidden');

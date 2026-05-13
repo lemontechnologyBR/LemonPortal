@@ -229,8 +229,9 @@ function registerClubeRoutes(app) {
     const total  = c.speedtests.length;
     const dias   = [...new Set(c.speedtests.map(t => t.data))];
     const temManha = c.speedtests.some(t => t.hora >= 6 && t.hora < 12);
-    const temNoite = c.speedtests.some(t => t.hora >= 20 && t.hora < 23);
+    const temNoite = c.speedtests.some(t => t.hora >= 20 && t.hora <= 23);
 
+    const ptsBefore = c.points || 0;
     function autoST(id) {
       const m = MISSIONS[id];
       if (!m || (c.completedMissions || []).includes(id)) return;
@@ -252,9 +253,11 @@ function registerClubeRoutes(app) {
       if (ratio >= 1.0) autoST('speedtest_100');
     }
 
+    const novosPts = (c.points || 0) - ptsBefore;
     saveClient(login, c);
     res.json({
       success: true,
+      novosPts,
       pontos: c.points,
       missoesConcluidas: c.completedMissions,
       totalTestes: total,
@@ -349,7 +352,7 @@ function registerClubeRoutes(app) {
       if (tipo === 'speedtest_5x'   && total < 5)  return res.status(400).json({ error: 'Faça pelo menos 5 testes.' });
       if (tipo === 'speedtest_10x'  && total < 10) return res.status(400).json({ error: 'Faça pelo menos 10 testes.' });
       if (tipo === 'speedtest_manha'  && !c.speedtests.some(t => t.hora >= 6  && t.hora < 12)) return res.status(400).json({ error: 'Nenhum teste matinal encontrado.' });
-      if (tipo === 'speedtest_noite'  && !c.speedtests.some(t => t.hora >= 20 && t.hora < 23)) return res.status(400).json({ error: 'Nenhum teste noturno encontrado.' });
+      if (tipo === 'speedtest_noite'  && !c.speedtests.some(t => t.hora >= 20 && t.hora <= 23)) return res.status(400).json({ error: 'Nenhum teste noturno encontrado.' });
       if (tipo === 'speedtest_semana' && dias.length < 3) return res.status(400).json({ error: 'Teste em pelo menos 3 dias diferentes.' });
       if (tipo === 'speedtest_excelente' && !c.speedtests.some(t => t.planSpeed > 0 && t.dl / t.planSpeed >= 0.9)) return res.status(400).json({ error: 'Nenhum teste com ≥90% do plano.' });
       if (tipo === 'speedtest_100'   && !c.speedtests.some(t => t.planSpeed > 0 && t.dl / t.planSpeed >= 1.0)) return res.status(400).json({ error: 'Nenhum teste com 100% do plano.' });
@@ -401,20 +404,6 @@ function registerClubeRoutes(app) {
       }
     }
 
-    if (tipo === 'abrir_chamado') {
-      try {
-        const token = await getJWT();
-        const r = await axios.get(`${MK_URL}/chamado/listar/pagina=1/cliente=${login}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const chamados = Array.isArray(r.data) ? r.data : (r.data?.registros || []);
-        if (chamados.length === 0) {
-          return res.status(400).json({ error: 'Abra um chamado de suporte primeiro.' });
-        }
-      } catch {
-        return res.status(500).json({ error: 'Não foi possível verificar seus chamados.' });
-      }
-    }
 
     if (tipo === 'mudar_dados') {
       try {

@@ -407,7 +407,6 @@ export function irFazerMissao(id) {
       showToast('Visite todas as seções do portal para concluir 🧭', 'info');
     },
     acesso_noturno: () => showToast('Acesse o portal após as 22h para concluir 🌙', 'info'),
-    abrir_chamado: () => go('suporte'),
     perfil_completo: () => go('perfil'),
     instalar_app: () => instalarApp(),
     compartilhar_link: () => copiarLinkRef(document.querySelector('.ref-link-box .copy-btn')),
@@ -840,6 +839,8 @@ export function fecharModalInstalarApp() {
 
 export async function instalarApp() {
   if (isStandalonePwa()) {
+    // Já instalado — garante que a missão seja concluída
+    completarMissao('instalar_app', null, true);
     return showToast('O portal já está aberto como app na tela inicial.', 'success');
   }
   if (_pwaPrompt) {
@@ -848,10 +849,10 @@ export async function instalarApp() {
     if (outcome === 'accepted') {
       _pwaPrompt = null;
       completarMissao('instalar_app', null, false);
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then(perm => {
-          if (perm === 'granted') completarMissao('ativar_notif', null, false);
-        });
+      // Após instalar o PWA, oferecer ativação de notificações pelo fluxo completo
+      // (cria subscription no servidor antes de conceder pontos)
+      if ('Notification' in window && Notification.permission !== 'denied') {
+        setTimeout(() => ativarNotificacoes(), 1200);
       }
     }
     return;

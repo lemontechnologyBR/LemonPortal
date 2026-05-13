@@ -2662,7 +2662,6 @@ document.getElementById('form-chamado').addEventListener('submit', async (e) => 
   try {
     await request('POST', `${API}/chamados`, { assunto, prioridade, mensagem });
     showAlert('chamado-feedback', 'Chamado aberto com sucesso! Em breve entraremos em contato.', 'success');
-    completarMissao('abrir_chamado', null);
     document.getElementById('chamado-mensagem').value = '';
     faturasCarregadas.abertas = false;
     loadChamados();
@@ -3792,7 +3791,6 @@ function irFazerMissao(id) {
     ver_historico:       () => navTo('indicacoes'),
     explorador:          () => { navTo('dashboard'); showToast('Visite todas as seções do portal para concluir 🧭', 'info'); },
     acesso_noturno:      () => showToast('Acesse o portal após as 22h para concluir 🌙', 'info'),
-    abrir_chamado:       () => navTo('suporte'),
     // ── App & Perfil ────────────────────────────────────────────────
     perfil_completo:     () => navTo('perfil'),
     instalar_app:        () => instalarPWA(),

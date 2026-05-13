@@ -369,7 +369,7 @@ export async function iniciarSpeedTest() {
             if (m[id]) showToast(`+pts — Missão "${m[id]}" concluída! 🎯`, 'success');
           }
         }
-        if (stRes.pontos) {
+        if (stRes.pontos && stRes.novosPts > 0) {
           S.clubPontos = stRes.pontos;
           animarContador('ref-pontos', stRes.pontos);
         }

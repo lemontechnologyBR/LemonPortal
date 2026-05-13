@@ -96,7 +96,6 @@ export function initChamados() {
     try {
       await request('POST', `${API}/chamados`, { assunto, prioridade, mensagem });
       showAlert('chamado-feedback', 'Chamado aberto com sucesso! Em breve entraremos em contato.', 'success');
-      window.completarMissao && window.completarMissao('abrir_chamado', null);
       document.getElementById('chamado-mensagem').value = '';
       S.faturasCarregadas.abertas = false;
       loadChamados();

@@ -229,6 +229,12 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
       completarMissao('acesso_noturno', null, true);
       completarMissao('login_3x',       null, true);
       completarMissao('uso_semanal',    null, true);
+      // Se o portal está aberto em modo standalone, o app já foi instalado
+      try {
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+          completarMissao('instalar_app', null, true);
+        }
+      } catch (_) {}
     }, 2500);
     // Modal de boas-vindas no primeiro acesso
     if (res.primeiroAcesso) {

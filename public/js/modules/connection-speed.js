@@ -93,6 +93,40 @@ export function loadVelocidade() {
   if (planSpeed) {
     document.getElementById('cmp-plano').textContent = `${planSpeed} Mbps`;
   }
+  detectarISP();
+}
+
+async function detectarISP() {
+  // Usa cache de sessão para não bater na API em toda visita
+  const cached = sessionStorage.getItem('lemon_isp_v1');
+  if (cached) {
+    try { _renderISP(JSON.parse(cached)); return; } catch (_) {}
+  }
+  try {
+    const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json();
+    sessionStorage.setItem('lemon_isp_v1', JSON.stringify(d));
+    _renderISP(d);
+  } catch (_) {
+    _renderISP(null);
+  }
+}
+
+function _renderISP(d) {
+  const nameEl = document.getElementById('st-isp-name');
+  const ipEl   = document.getElementById('st-isp-ip');
+  if (!nameEl || !ipEl) return;
+  if (!d) {
+    nameEl.textContent = 'ISP desconhecido';
+    ipEl.textContent   = '';
+    return;
+  }
+  // Remove prefixo ASN: "AS264499 Giganet Telecom Ltda" → "Giganet Telecom Ltda"
+  const raw  = d.org || d.asn || '';
+  const name = raw.replace(/^AS\d+\s+/i, '') || 'Provedor local';
+  nameEl.textContent = name.length > 24 ? name.slice(0, 22) + '…' : name;
+  ipEl.textContent   = d.ip || '';
 }
 
 function getPlanSpeed() {
@@ -106,10 +140,12 @@ function getPlanSpeed() {
   return null;
 }
 
+const DIAL_CIRC = 754; // 2π × r120 ≈ 754
+
 function setGauge(pct) {
-  const arc = document.getElementById('gauge-arc');
+  const arc = document.getElementById('st-arc-fill');
   if (!arc) return;
-  arc.style.strokeDashoffset = GAUGE_LEN * (1 - Math.min(Math.max(pct, 0), 1));
+  arc.style.strokeDashoffset = DIAL_CIRC * (1 - Math.min(Math.max(pct, 0), 1));
 }
 
 function animateSpeed(from, to, duration, onUpdate) {
@@ -270,20 +306,20 @@ export async function iniciarSpeedTest() {
   if (S.speedTesting) return;
   S.speedTesting = true;
 
-  const btn = document.getElementById('btn-speedtest');
-  const gauge = document.querySelector('.speed-gauge');
+  const ringBtn   = document.getElementById('st-ring-btn');
+  const ringOuter = document.getElementById('st-ring-outer');
+  const ringMid   = document.getElementById('st-ring-mid');
   const phase = document.getElementById('speed-phase');
-  const disp = document.getElementById('speed-display');
-  const unit = document.getElementById('speed-unit');
+  const disp  = document.getElementById('speed-display');
+  const unit  = document.getElementById('speed-unit');
   const pWrap = document.getElementById('speed-progress-wrap');
   const pFill = document.getElementById('speed-progress-fill');
 
   document.getElementById('speed-results').classList.add('hidden');
   document.getElementById('speed-compare').classList.add('hidden');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Testando...</span>';
-  btn.classList.add('testing');
-  gauge.classList.add('testing');
+  ringBtn.classList.add('testing');
+  ringOuter.classList.add('testing');
+  ringMid.classList.add('testing');
   pWrap.classList.remove('hidden');
   setGauge(0);
   unit.textContent = 'Mbps';
@@ -367,12 +403,13 @@ export async function iniciarSpeedTest() {
     document.getElementById('res-upload').textContent = ulMbps.toFixed(1);
     pFill.style.width = '100%';
 
-    phase.textContent = '✓ Concluído';
-    unit.textContent = 'Mbps';
+    phase.textContent = '✓ CONCLUÍDO';
+    unit.textContent = 'Mbps ↓';
     animateSpeed(ulMbps, dlMbps, 700, val => {
       disp.textContent = val.toFixed(1);
       setGauge(val / S.gaugeMax);
     });
+    setTimeout(() => { phase.textContent = 'TESTAR NOVAMENTE'; unit.textContent = 'Mbps'; }, 3000);
 
     setTimeout(async () => {
       document.getElementById('speed-results').classList.remove('hidden');
@@ -412,15 +449,14 @@ export async function iniciarSpeedTest() {
       } catch {}
     }, 800);
   } catch (err) {
-    phase.textContent = 'Erro no teste';
+    phase.textContent = 'ERRO';
     disp.textContent = '--';
     console.error('SpeedTest erro:', err);
   } finally {
     S.speedTesting = false;
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> <span>Testar novamente</span>';
-    btn.classList.remove('testing');
-    gauge.classList.remove('testing');
+    ringBtn.classList.remove('testing');
+    ringOuter.classList.remove('testing');
+    ringMid.classList.remove('testing');
     setTimeout(() => pWrap.classList.add('hidden'), 1500);
   }
 }

@@ -1447,50 +1447,57 @@
             <p>Verifique a performance da sua conexão Lemon</p>
           </div>
 
-          <!-- Speedometer -->
-          <div class="speed-card">
-            <div class="speed-gauge-wrap">
-              <svg class="speed-gauge" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Arco de fundo -->
-                <path id="gauge-bg"   d="M20,130 A90,90 0 0,1 200,130" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round" fill="none"/>
-                <!-- Arco de progresso -->
-                <path id="gauge-arc"  d="M20,130 A90,90 0 0,1 200,130" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" fill="none"
-                      stroke-dasharray="283" stroke-dashoffset="283"/>
-                <!-- Marca de ticks -->
-                <path d="M20,130 L28,130" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M200,130 L192,130" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M110,40 L110,50" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-linecap="round"/>
+          <!-- Dial estilo Speedtest.net -->
+          <div class="st-card">
+            <!-- Anel circular clicável -->
+            <div class="st-ring-wrap">
+              <div class="st-ring-outer" id="st-ring-outer">
+                <div class="st-ring-mid" id="st-ring-mid">
+                  <div class="st-ring-btn" id="st-ring-btn" onclick="iniciarSpeedTest()">
+                    <div class="st-ring-inner">
+                      <div class="st-speed-num" id="speed-display">--</div>
+                      <div class="st-speed-unit" id="speed-unit">Mbps</div>
+                      <div class="st-phase" id="speed-phase">INICIAR</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Arco de progresso SVG (overlay) -->
+              <svg class="st-ring-arc" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%"   stop-color="#6366f1"/>
-                    <stop offset="50%"  stop-color="#b6c33f"/>
-                    <stop offset="100%" stop-color="#22c55e"/>
+                  <linearGradient id="stArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   stop-color="#00b4d8"/>
+                    <stop offset="100%" stop-color="#90e0ef"/>
                   </linearGradient>
                 </defs>
+                <circle class="st-arc-track" cx="130" cy="130" r="120"/>
+                <circle class="st-arc-fill"  id="st-arc-fill" cx="130" cy="130" r="120"/>
               </svg>
-              <!-- Valor central -->
-              <div class="speed-center">
-                <div class="speed-value" id="speed-display">--</div>
-                <div class="speed-unit" id="speed-unit">Mbps</div>
-                <div class="speed-phase" id="speed-phase">Pronto para testar</div>
-              </div>
             </div>
-
-            <!-- Labels do gauge -->
-            <div class="gauge-labels">
-              <span>0</span><span>250</span><span>500</span><span>750</span><span>1000+</span>
-            </div>
-
-            <!-- Botão iniciar -->
-            <button id="btn-speedtest" class="btn-speedtest" onclick="iniciarSpeedTest()">
-              <i class="fa-solid fa-play"></i>
-              <span>Testar minha internet</span>
-            </button>
 
             <!-- Barra de progresso -->
             <div class="speed-progress-wrap hidden" id="speed-progress-wrap">
               <div class="speed-progress-bar">
                 <div class="speed-progress-fill" id="speed-progress-fill"></div>
+              </div>
+            </div>
+
+            <!-- ISP + Servidor (estilo Speedtest.net) -->
+            <div class="st-info-row">
+              <div class="st-info-item">
+                <div class="st-info-icon"><i class="fa-solid fa-user"></i></div>
+                <div>
+                  <div class="st-info-name" id="st-isp-name">Detectando…</div>
+                  <div class="st-info-sub" id="st-isp-ip">—</div>
+                </div>
+              </div>
+              <div class="st-info-div"></div>
+              <div class="st-info-item st-info-item--right">
+                <div class="st-info-icon"><i class="fa-solid fa-globe"></i></div>
+                <div style="text-align:right">
+                  <div class="st-info-name">Lemon Technology</div>
+                  <div class="st-info-sub">São Paulo, Brasil</div>
+                </div>
               </div>
             </div>
           </div>

@@ -4772,124 +4772,199 @@ input, select, textarea { font-family: inherit; }
    VELOCIDADE / SPEED TEST
    =========================== */
 
-.speed-card {
+/* ═══ Dial estilo Speedtest.net ════════════════════════════════════════════ */
+.st-card {
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 28px 20px 20px;
+  padding: 40px 20px 28px;
   margin-bottom: 20px;
+  text-align: center;
   backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
-  text-align: center;
 }
-
-.speed-card::before {
+.st-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(var(--lemon-rgb),0.04) 0%, transparent 60%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,180,216,0.06) 0%, transparent 70%);
   pointer-events: none;
 }
 
-.speed-gauge-wrap {
+/* ── Anel / dial ──────────────────────────────────────────────────────────── */
+.st-ring-wrap {
   position: relative;
-  display: inline-block;
-  width: 100%;
-  max-width: 320px;
-}
-
-.speed-gauge {
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 0 16px rgba(var(--lemon-rgb),0.12));
-}
-
-.speed-center {
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  pointer-events: none;
-}
-
-.speed-value {
-  font-size: 3rem;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.04em;
-  line-height: 1;
-  transition: all 0.15s ease;
-}
-
-.speed-unit {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.speed-phase {
-  font-size: 0.75rem;
-  color: var(--lemon);
-  font-weight: 600;
-  margin-top: 6px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  min-height: 1.2em;
-}
-
-.gauge-labels {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 8px;
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  opacity: 0.5;
-  margin-top: 4px;
-  margin-bottom: 20px;
-}
-
-.btn-speedtest {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 36px;
-  border-radius: 99px;
-  background: linear-gradient(135deg, var(--lemon), var(--lemon-dark));
-  color: var(--ink);
-  font-size: 1rem;
-  font-weight: 700;
-  font-family: 'Space Grotesk', inherit;
+  justify-content: center;
+  width: 260px;
+  height: 260px;
+  margin-bottom: 32px;
+}
+
+.st-ring-outer {
+  width: 224px;
+  height: 224px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,180,216,0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.4s ease;
+}
+
+/* Anel com gradiente (borda colorida) */
+.st-ring-mid {
+  width: 196px;
+  height: 196px;
+  border-radius: 50%;
+  background: conic-gradient(from 120deg, rgba(0,180,216,0.55), rgba(144,224,239,0.7), rgba(0,180,216,0.55));
+  padding: 2.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 28px rgba(0,180,216,0.12);
+  transition: box-shadow 0.4s ease;
+}
+
+/* Botão interno */
+.st-ring-btn {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #1c2240 0%, #0d1117 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
   border: none;
-  transition: all var(--transition);
-  box-shadow: 0 6px 30px rgba(var(--lemon-rgb),0.35);
-  letter-spacing: -0.01em;
+  outline: none;
+}
+.st-ring-btn:hover:not(.testing) {
+  background: radial-gradient(circle at 50% 38%, #1f2850 0%, #111827 100%);
+}
+.st-ring-btn:active:not(.testing) { transform: scale(0.98); }
+.st-ring-btn.testing { cursor: default; }
+
+.st-ring-inner { text-align: center; pointer-events: none; }
+
+.st-speed-num {
+  font-size: 3.4rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: all 0.1s ease;
+}
+.st-speed-unit {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-top: 5px;
+  font-weight: 600;
+}
+.st-phase {
+  font-size: 0.78rem;
+  color: #00b4d8;
+  font-weight: 700;
+  margin-top: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  min-height: 1.1em;
 }
 
-.btn-speedtest:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 10px 40px rgba(var(--lemon-rgb),0.5);
+/* Arco de progresso SVG (overlay) */
+.st-ring-arc {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.st-arc-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.04);
+  stroke-width: 4;
+}
+.st-arc-fill {
+  fill: none;
+  stroke: url(#stArcGrad);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 754;
+  stroke-dashoffset: 754;
+  transition: stroke-dashoffset 0.2s ease;
 }
 
-.btn-speedtest:active { transform: scale(0.98); }
-
-.btn-speedtest:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+/* ── Animações de teste ───────────────────────────────────────────────────── */
+@keyframes stOuterPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%       { box-shadow: 0 0 40px 4px rgba(0,180,216,0.25); }
 }
+@keyframes stMidSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.st-ring-outer.testing { animation: stOuterPulse 1.6s ease-in-out infinite; }
+.st-ring-mid.testing   { animation: stMidSpin 3s linear infinite; }
 
-.btn-speedtest.testing {
-  background: var(--glass);
+/* ── Info row ISP / Servidor ──────────────────────────────────────────────── */
+.st-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.st-info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 170px;
+  min-width: 0;
+}
+.st-info-item--right { justify-content: flex-end; }
+.st-info-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.45);
+  flex-shrink: 0;
+}
+.st-info-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-info-sub {
+  font-size: 0.7rem;
   color: var(--text-muted);
-  border: 1px solid var(--glass-border);
-  box-shadow: none;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-info-sub a { color: #00b4d8; text-decoration: none; }
+.st-info-div {
+  width: 1px;
+  height: 34px;
+  background: var(--glass-border);
+  flex-shrink: 0;
 }
 
 .speed-progress-wrap {
@@ -5068,18 +5143,15 @@ input, select, textarea { font-family: inherit; }
 
 .speed-history-val i { font-size: 0.7rem; }
 
-@keyframes gaugeGlow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(var(--lemon-rgb),0.2)); }
-  50%       { filter: drop-shadow(0 0 24px rgba(var(--lemon-rgb),0.5)); }
-}
-
-.speed-gauge.testing { animation: gaugeGlow 1.2s ease-in-out infinite; }
-
 /* Mobile */
 @media (max-width: 480px) {
   .speed-results { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .speed-result-value { font-size: 1.25rem; }
-  .speed-value { font-size: 2.5rem; }
+  .st-speed-num { font-size: 2.7rem; }
+  .st-ring-wrap  { width: 220px; height: 220px; }
+  .st-ring-outer { width: 190px; height: 190px; }
+  .st-ring-mid   { width: 166px; height: 166px; }
+  .st-info-name  { font-size: 0.73rem; }
 }
 
 /* ===========================

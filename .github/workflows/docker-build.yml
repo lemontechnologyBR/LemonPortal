@@ -37,8 +37,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy to Portainer (auto-redeploy com credenciais frescas)
+        continue-on-error: true
+        timeout-minutes: 3
         run: |
           set -e
+          CURL="curl -sf --connect-timeout 10 --max-time 25"
 
           PORTAINER_URL="${{ secrets.PORTAINER_URL }}"
           PORTAINER_USER="${{ secrets.PORTAINER_USER }}"
@@ -47,57 +50,43 @@ jobs:
           GH_ACTOR="${{ github.actor }}"
 
           echo ">>> Autenticando no Portainer..."
-          JWT=$(curl -sf -X POST "${PORTAINER_URL}/api/auth" \
+          JWT=$(${CURL} -X POST "${PORTAINER_URL}/api/auth" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"${PORTAINER_USER}\",\"password\":\"${PORTAINER_PASS}\"}" \
             | jq -r '.jwt')
+          [ -z "$JWT" ] && echo "Falha ao obter JWT" && exit 1
 
           echo ">>> Atualizando credenciais GHCR no Portainer..."
-          curl -sf -X PUT "${PORTAINER_URL}/api/registries/1" \
+          ${CURL} -X PUT "${PORTAINER_URL}/api/registries/1" \
             -H "Authorization: Bearer ${JWT}" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"Name\":\"ghcr.io\",
-              \"URL\":\"ghcr.io\",
-              \"Type\":3,
-              \"Authentication\":true,
-              \"Username\":\"${GH_ACTOR}\",
-              \"Password\":\"${GH_TOKEN}\"
-            }" > /dev/null
+            -d "{\"Name\":\"ghcr.io\",\"URL\":\"ghcr.io\",\"Type\":3,\"Authentication\":true,\"Username\":\"${GH_ACTOR}\",\"Password\":\"${GH_TOKEN}\"}" \
+            > /dev/null
+          echo "    credenciais atualizadas"
 
-          echo ">>> Buscando spec atual do service lemon-portal_app..."
-          SVC=$(curl -sf "${PORTAINER_URL}/api/endpoints/1/docker/services/1y73jbn09gti" \
+          echo ">>> Buscando spec do service..."
+          SVC=$(${CURL} "${PORTAINER_URL}/api/endpoints/1/docker/services/1y73jbn09gti" \
             -H "Authorization: Bearer ${JWT}")
           VERSION=$(echo "$SVC" | jq -r '.Version.Index')
           FORCE=$(echo "$SVC" | jq -r '.Spec.TaskTemplate.ForceUpdate // 0')
           NEW_FORCE=$((FORCE + 1))
-          echo "    version=${VERSION} forceUpdate=${FORCE} -> ${NEW_FORCE}"
+          echo "    version=${VERSION} forceUpdate ${FORCE} -> ${NEW_FORCE}"
 
-          # Auth Docker codificada em base64 para passar ao Swarm
           AUTH_JSON="{\"username\":\"${GH_ACTOR}\",\"password\":\"${GH_TOKEN}\",\"serveraddress\":\"ghcr.io\"}"
           REGISTRY_AUTH=$(echo -n "${AUTH_JSON}" | base64 -w 0)
 
-          # Montar spec com ForceUpdate incrementado
           SPEC=$(echo "$SVC" | jq --argjson f "$NEW_FORCE" '
-            .Spec |
-            .TaskTemplate.ForceUpdate = $f |
-            {
-              Name: .Name,
-              TaskTemplate: .TaskTemplate,
-              Mode: .Mode,
-              UpdateConfig: .UpdateConfig,
-              Networks: .Networks,
-              EndpointSpec: .EndpointSpec,
-              Labels: .Labels
-            }')
+            .Spec | .TaskTemplate.ForceUpdate = $f |
+            {Name:.Name,TaskTemplate:.TaskTemplate,Mode:.Mode,
+             UpdateConfig:.UpdateConfig,Networks:.Networks,
+             EndpointSpec:.EndpointSpec,Labels:.Labels}')
 
-          echo ">>> Forçando re-deploy com auth GHCR embutida..."
-          RESULT=$(curl -sf -X POST \
+          echo ">>> Forçando re-deploy..."
+          RESULT=$(${CURL} -X POST \
             "${PORTAINER_URL}/api/endpoints/1/docker/services/1y73jbn09gti/update?version=${VERSION}" \
             -H "Authorization: Bearer ${JWT}" \
             -H "Content-Type: application/json" \
             -H "X-Registry-Auth: ${REGISTRY_AUTH}" \
             -d "${SPEC}")
 
-          WARNINGS=$(echo "$RESULT" | jq -r '.Warnings // "none"')
-          echo "✅ Deploy concluído — warnings: ${WARNINGS}"
+          echo "✅ Deploy concluído — warnings: $(echo "$RESULT" | jq -r '.Warnings // "none"')"

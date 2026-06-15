@@ -95,7 +95,7 @@
             { "name": "client_id", "value": "3754b650a243f" },
             { "name": "client_secret", "value": "9c962db3c265a" },
             { "name": "code", "value": "={{ $json._code }}" },
-            { "name": "grant_type", "value": "password" }
+            { "name": "grant_type", "value": "authorization_code" }
           ]
         },
         "options": { "response": { "response": { "fullResponse": true } }, "timeout": 25000 }
@@ -118,7 +118,7 @@
             { "name": "client_id", "value": "3754b650a243f" },
             { "name": "client_secret", "value": "9c962db3c265a" },
             { "name": "code", "value": "={{ $json._code }}" },
-            { "name": "grant_type", "value": "password" }
+            { "name": "grant_type", "value": "authorization_code" }
           ]
         },
         "options": { "response": { "response": { "fullResponse": true } }, "timeout": 25000 }
@@ -155,7 +155,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://transperitoneal-malcontentedly-genna.ngrok-free.dev/portal/watch/oauth/save-token",
+        "url": "https://lemon.technology/portal/watch/oauth/save-token",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -178,7 +178,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://transperitoneal-malcontentedly-genna.ngrok-free.dev/portal/watch/oauth/save-token",
+        "url": "https://lemon.technology/portal/watch/oauth/save-token",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

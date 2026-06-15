@@ -94,7 +94,7 @@ function registerWatchBrasilRoutes(app, { requireAuth, requireAdmin }) {
   });
 
   app.get('/admin/watch/config', requireAdmin, (req, res) => {
-    res.json(watch.getPublicConfig());
+    res.json({ ...watch.getPublicConfig(), tokenStatus: watch.getTokenStatus() });
   });
 
   /** Grava token manualmente (ex.: colado do Postman). Body: { "accessToken": "..." } */

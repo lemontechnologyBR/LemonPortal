@@ -1,4 +1,4 @@
-name: Build & Push Docker Image
+name: Build, Push & Deploy
 
 on:
   push:
@@ -36,14 +36,68 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Set package visibility to public
+      - name: Deploy to Portainer (auto-redeploy com credenciais frescas)
         run: |
-          PACKAGE_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
-          curl -s -X PATCH \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/user/packages/container/${PACKAGE_NAME}" \
-            -d '{"visibility":"public"}' \
-            -o /tmp/pkg_resp.json -w "HTTP %{http_code}\n"
-          cat /tmp/pkg_resp.json || true
+          set -e
+
+          PORTAINER_URL="${{ secrets.PORTAINER_URL }}"
+          PORTAINER_USER="${{ secrets.PORTAINER_USER }}"
+          PORTAINER_PASS="${{ secrets.PORTAINER_PASS }}"
+          GH_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          GH_ACTOR="${{ github.actor }}"
+
+          echo ">>> Autenticando no Portainer..."
+          JWT=$(curl -sf -X POST "${PORTAINER_URL}/api/auth" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${PORTAINER_USER}\",\"password\":\"${PORTAINER_PASS}\"}" \
+            | jq -r '.jwt')
+
+          echo ">>> Atualizando credenciais GHCR no Portainer..."
+          curl -sf -X PUT "${PORTAINER_URL}/api/registries/1" \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"Name\":\"ghcr.io\",
+              \"URL\":\"ghcr.io\",
+              \"Type\":3,
+              \"Authentication\":true,
+              \"Username\":\"${GH_ACTOR}\",
+              \"Password\":\"${GH_TOKEN}\"
+            }" > /dev/null
+
+          echo ">>> Buscando spec atual do service lemon-portal_app..."
+          SVC=$(curl -sf "${PORTAINER_URL}/api/endpoints/1/docker/services/1y73jbn09gti" \
+            -H "Authorization: Bearer ${JWT}")
+          VERSION=$(echo "$SVC" | jq -r '.Version.Index')
+          FORCE=$(echo "$SVC" | jq -r '.Spec.TaskTemplate.ForceUpdate // 0')
+          NEW_FORCE=$((FORCE + 1))
+          echo "    version=${VERSION} forceUpdate=${FORCE} -> ${NEW_FORCE}"
+
+          # Auth Docker codificada em base64 para passar ao Swarm
+          AUTH_JSON="{\"username\":\"${GH_ACTOR}\",\"password\":\"${GH_TOKEN}\",\"serveraddress\":\"ghcr.io\"}"
+          REGISTRY_AUTH=$(echo -n "${AUTH_JSON}" | base64 -w 0)
+
+          # Montar spec com ForceUpdate incrementado
+          SPEC=$(echo "$SVC" | jq --argjson f "$NEW_FORCE" '
+            .Spec |
+            .TaskTemplate.ForceUpdate = $f |
+            {
+              Name: .Name,
+              TaskTemplate: .TaskTemplate,
+              Mode: .Mode,
+              UpdateConfig: .UpdateConfig,
+              Networks: .Networks,
+              EndpointSpec: .EndpointSpec,
+              Labels: .Labels
+            }')
+
+          echo ">>> Forçando re-deploy com auth GHCR embutida..."
+          RESULT=$(curl -sf -X POST \
+            "${PORTAINER_URL}/api/endpoints/1/docker/services/1y73jbn09gti/update?version=${VERSION}" \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Content-Type: application/json" \
+            -H "X-Registry-Auth: ${REGISTRY_AUTH}" \
+            -d "${SPEC}")
+
+          WARNINGS=$(echo "$RESULT" | jq -r '.Warnings // "none"')
+          echo "✅ Deploy concluído — warnings: ${WARNINGS}"

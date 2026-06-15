@@ -779,10 +779,14 @@ export async function loadDashboard() {
       const statusTxt = document.getElementById('dash-status');
       const statusDot = document.getElementById('dash-status-dot');
       const pill = document.getElementById('dash-status-pill');
+      const tileWatch = document.getElementById('tile-watch');
+      const tileWatchStatus = document.getElementById('tile-watch-status');
       if (!FEATURE_WATCH_TV) {
         if (pill) pill.classList.add('hidden');
+        if (tileWatch) tileWatch.classList.add('hidden');
       } else {
         if (pill) pill.classList.remove('hidden');
+        if (tileWatch) tileWatch.classList.remove('hidden');
         try {
           const wst = await request('GET', `${API}/watch/status`);
           if (wst.ok && wst.hasToken) {
@@ -793,6 +797,7 @@ export async function loadDashboard() {
             const hasActive = wList.some(t => t.Status === true || t.Status === 'true');
             if (statusTxt) statusTxt.textContent = hasActive ? 'Watch Ativo' : 'Sem Watch';
             if (statusDot) { statusDot.classList.toggle('online', hasActive); statusDot.classList.toggle('offline', !hasActive); }
+            if (tileWatchStatus) { tileWatchStatus.textContent = hasActive ? 'Ativo' : ''; tileWatchStatus.classList.toggle('hidden', !hasActive); }
           } else {
             if (statusTxt) statusTxt.textContent = 'Sem Watch';
             if (statusDot) { statusDot.classList.remove('online'); statusDot.classList.add('offline'); }

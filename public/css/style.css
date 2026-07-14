@@ -4814,22 +4814,36 @@ input, select, textarea { font-family: inherit; }
   transition: box-shadow 0.4s ease;
 }
 
-/* Anel com gradiente (borda colorida) */
+/* Anel com gradiente (borda colorida) — girar só o ::before, nunca o texto */
 .st-ring-mid {
+  position: relative;
+  isolation: isolate;
   width: 196px;
   height: 196px;
   border-radius: 50%;
-  background: conic-gradient(from 120deg, rgba(0,180,216,0.55), rgba(144,224,239,0.7), rgba(0,180,216,0.55));
+  background: transparent;
   padding: 2.5px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 28px rgba(0,180,216,0.12);
   transition: box-shadow 0.4s ease;
+  transform: none;
+}
+.st-ring-mid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 120deg, rgba(0,180,216,0.55), rgba(144,224,239,0.7), rgba(0,180,216,0.55));
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* Botão interno */
 .st-ring-btn {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -4842,6 +4856,7 @@ input, select, textarea { font-family: inherit; }
   transition: background 0.2s ease;
   border: none;
   outline: none;
+  transform: none;
 }
 .st-ring-btn:hover:not(.testing) {
   background: radial-gradient(circle at 50% 38%, #1f2850 0%, #111827 100%);
@@ -4849,7 +4864,12 @@ input, select, textarea { font-family: inherit; }
 .st-ring-btn:active:not(.testing) { transform: scale(0.98); }
 .st-ring-btn.testing { cursor: default; }
 
-.st-ring-inner { text-align: center; pointer-events: none; }
+.st-ring-inner {
+  text-align: center;
+  pointer-events: none;
+  transform: none;
+  writing-mode: horizontal-tb;
+}
 
 .st-speed-num {
   font-size: 3.4rem;
@@ -4895,11 +4915,11 @@ input, select, textarea { font-family: inherit; }
 .st-arc-fill {
   fill: none;
   stroke: url(#stArcGrad);
-  stroke-width: 4;
+  stroke-width: 5;
   stroke-linecap: round;
-  stroke-dasharray: 754;
-  stroke-dashoffset: 754;
-  transition: stroke-dashoffset 0.2s ease;
+  stroke-dasharray: 753.98;
+  stroke-dashoffset: 753.98;
+  transition: stroke-dashoffset 0.15s ease-out;
 }
 
 /* ── Animações de teste ───────────────────────────────────────────────────── */
@@ -4912,7 +4932,8 @@ input, select, textarea { font-family: inherit; }
   to   { transform: rotate(360deg); }
 }
 .st-ring-outer.testing { animation: stOuterPulse 1.6s ease-in-out infinite; }
-.st-ring-mid.testing   { animation: stMidSpin 3s linear infinite; }
+/* Gira apenas o anel decorativo — o botão/texto fica sempre reto */
+.st-ring-mid.testing::before { animation: stMidSpin 3s linear infinite; }
 
 /* ── Info row ISP / Servidor ──────────────────────────────────────────────── */
 .st-info-row {

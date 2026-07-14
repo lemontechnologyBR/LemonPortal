@@ -89,7 +89,10 @@ export function navToVelocidade() {
 export function loadVelocidade() {
   renderSpeedHistory();
   const planSpeed = getPlanSpeed();
-  S.gaugeMax = planSpeed ? Math.ceil((planSpeed * 1.2) / 100) * 100 : 1000;
+  // Dial até ~1.5× o plano (mín. 400) — deixa o arco chegar perto do fim no limite real do plano
+  S.gaugeMax = planSpeed
+    ? Math.max(400, Math.ceil((planSpeed * 1.5) / 100) * 100)
+    : 1000;
   if (planSpeed) {
     document.getElementById('cmp-plano').textContent = `${planSpeed} Mbps`;
   }
@@ -140,12 +143,21 @@ function getPlanSpeed() {
   return null;
 }
 
-const DIAL_CIRC = 754; // 2π × r120 ≈ 754
+const DIAL_CIRC = 2 * Math.PI * 120; // r=120 no SVG ≈ 753.98
+
+/** Mapeia Mbps → preenchimento do dial (0–1). Sqrt deixa velocidades médias mais legíveis. */
+function rateToGauge(rateMbps) {
+  const max = Math.max(S.gaugeMax || 1000, 1);
+  const linear = Math.min(Math.max(rateMbps, 0) / max, 1);
+  return Math.sqrt(linear);
+}
 
 function setGauge(pct) {
   const arc = document.getElementById('st-arc-fill');
   if (!arc) return;
-  arc.style.strokeDashoffset = DIAL_CIRC * (1 - Math.min(Math.max(pct, 0), 1));
+  const p = Math.min(Math.max(pct, 0), 1);
+  arc.style.strokeDasharray = String(DIAL_CIRC);
+  arc.style.strokeDashoffset = String(DIAL_CIRC * (1 - p));
 }
 
 function animateSpeed(from, to, duration, onUpdate) {
@@ -361,8 +373,8 @@ export async function iniciarSpeedTest() {
     dlMbps = await medirDownload(rate => {
       if (rate > dlPeak) dlPeak = rate;
       disp.textContent = rate.toFixed(1);
-      setGauge(rate / S.gaugeMax);
-      const prog = 20 + Math.min((rate / S.gaugeMax) * 45, 45);
+      setGauge(rateToGauge(rate));
+      const prog = 20 + Math.min(rateToGauge(rate) * 45, 45);
       pFill.style.width = prog + '%';
       if (phase.textContent === 'Aquecendo download...') phase.textContent = 'Testando download...';
     });
@@ -370,7 +382,7 @@ export async function iniciarSpeedTest() {
     await new Promise(r => {
       animateSpeed(parseFloat(disp.textContent) || dlMbps, dlMbps, 500, val => {
         disp.textContent = val.toFixed(1);
-        setGauge(val / S.gaugeMax);
+        setGauge(rateToGauge(val));
       });
       setTimeout(r, 550);
     });
@@ -387,8 +399,8 @@ export async function iniciarSpeedTest() {
 
     ulMbps = await medirUpload(rate => {
       disp.textContent = rate.toFixed(1);
-      setGauge(rate / S.gaugeMax);
-      const prog = 68 + Math.min((rate / S.gaugeMax) * 27, 27);
+      setGauge(rateToGauge(rate));
+      const prog = 68 + Math.min(rateToGauge(rate) * 27, 27);
       pFill.style.width = prog + '%';
       if (phase.textContent === 'Aquecendo upload...') phase.textContent = 'Testando upload...';
     });
@@ -396,7 +408,7 @@ export async function iniciarSpeedTest() {
     await new Promise(r => {
       animateSpeed(parseFloat(disp.textContent) || ulMbps, ulMbps, 500, val => {
         disp.textContent = val.toFixed(1);
-        setGauge(val / S.gaugeMax);
+        setGauge(rateToGauge(val));
       });
       setTimeout(r, 550);
     });
@@ -407,7 +419,7 @@ export async function iniciarSpeedTest() {
     unit.textContent = 'Mbps ↓';
     animateSpeed(ulMbps, dlMbps, 700, val => {
       disp.textContent = val.toFixed(1);
-      setGauge(val / S.gaugeMax);
+      setGauge(rateToGauge(val));
     });
     setTimeout(() => { phase.textContent = 'TESTAR NOVAMENTE'; unit.textContent = 'Mbps'; }, 3000);
 
@@ -457,6 +469,9 @@ export async function iniciarSpeedTest() {
     ringBtn.classList.remove('testing');
     ringOuter.classList.remove('testing');
     ringMid.classList.remove('testing');
+    // Garante que nenhum transform residual fique no anel/texto
+    ringMid.style.transform = '';
+    ringBtn.style.transform = '';
     setTimeout(() => pWrap.classList.add('hidden'), 1500);
   }
 }

@@ -192,7 +192,6 @@ async function medirPing(amostras = 12) {
 
 /** CDN de alta capacidade (mesmo princípio do Fast.com / Netflix Open Connect). */
 const CF_DOWN = bytes => `https://speed.cloudflare.com/__down?bytes=${bytes}&measId=${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const CF_UP   = 'https://speed.cloudflare.com/__up';
 
 async function medirDownload(onRate) {
   // 6 streams × 30 MB na Cloudflare — evita gargalo do VPS do portal
@@ -265,79 +264,90 @@ async function medirDownload(onRate) {
   return elapsed > 0 ? (totalBytes * 8) / elapsed / 1e6 : 0;
 }
 
-function xhrUploadStream(url, data, onRate) {
+/**
+ * Upload no servidor Lemon (bytes reais no destino).
+ * Não usa Cloudflare __up: o XHR reporta buffer local e infla a taxa para >1 Gbps.
+ * Taxa = agregada pelos bytes de todos os streams (não soma de picos por stream).
+ */
+function xhrUploadLocal(data, onLoaded) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    const t0 = performance.now();
-    let lastLoaded = 0;
-    let lastTs = t0;
-    const SAMPLE_MS = 150;
-    const WARMUP_MS = 1200;
-    const amostras = [];
-
     xhr.upload.onprogress = e => {
-      const now = performance.now();
-      const dt = now - lastTs;
-      if (dt >= SAMPLE_MS && e.loaded > lastLoaded) {
-        const rate = ((e.loaded - lastLoaded) * 8) / (dt / 1000) / 1e6;
-        if (now - t0 > WARMUP_MS && rate > 0) amostras.push(rate);
-        lastLoaded = e.loaded;
-        lastTs = now;
-        onRate(Math.max(0, rate), amostras);
-      }
+      if (e.lengthComputable) onLoaded(e.loaded);
+      else onLoaded(e.loaded);
     };
-
-    xhr.onload = () => resolve({
-      bytes: data.byteLength,
-      elapsed: (performance.now() - t0) / 1000,
-      amostras,
-    });
+    xhr.onload = () => {
+      onLoaded(data.byteLength);
+      resolve({ bytes: data.byteLength, elapsed: 0 });
+    };
     xhr.onerror = () => reject(new Error('upload failed'));
-    xhr.open('POST', url);
+    xhr.open('POST', '/speedtest/upload?t=' + Date.now());
     xhr.send(data);
   });
 }
 
 async function medirUpload(onRate) {
-  const STREAMS = 4;
-  const MB_EACH = 15;
+  const STREAMS = 3;
+  const MB_EACH = 12;
   const chunk = new Uint8Array(MB_EACH * 1024 * 1024);
-  const rates = new Array(STREAMS).fill(0);
-  const todasAmostras = [];
+  const streamLoaded = new Array(STREAMS).fill(0);
+  const aggSamples = [];
+  const WARMUP_MS = 1500;
+  const SAMPLE_MS = 250;
+  const t0 = performance.now();
+  let lastTs = t0;
+  let lastBytes = 0;
+  let warmupBytes = 0;
+  let warmupAt = 0;
 
-  function onStreamRate(idx, rate, amostras) {
-    rates[idx] = rate;
-    if (amostras && amostras.length) {
-      // Usa só as amostras novas (não re-empurra a lista inteira a cada progresso)
-      todasAmostras.push(amostras[amostras.length - 1]);
+  function onStreamLoaded(idx, loaded) {
+    streamLoaded[idx] = loaded;
+    const total = streamLoaded.reduce((a, b) => a + b, 0);
+    const now = performance.now();
+
+    if (!warmupAt && now - t0 >= WARMUP_MS) {
+      warmupAt = now;
+      warmupBytes = total;
+      lastTs = now;
+      lastBytes = total;
     }
-    onRate(rates.reduce((a, b) => a + b, 0));
+
+    const dt = now - lastTs;
+    if (dt >= SAMPLE_MS) {
+      const rate = ((total - lastBytes) * 8) / (dt / 1000) / 1e6;
+      lastTs = now;
+      lastBytes = total;
+      // Descarta spikes absurdos do buffer do browser (>2 Gbps)
+      if (rate > 0 && rate < 2000) {
+        if (warmupAt) aggSamples.push(rate);
+        onRate(Math.max(0, rate));
+      }
+    }
   }
 
-  async function runAgainst(url) {
-    todasAmostras.length = 0;
-    rates.fill(0);
-    await Promise.all(
-      Array.from({ length: STREAMS }, (_, i) =>
-        xhrUploadStream(url, chunk.slice(), (rate, am) => onStreamRate(i, rate, am)),
-      ),
-    );
+  await Promise.all(
+    Array.from({ length: STREAMS }, (_, i) =>
+      xhrUploadLocal(chunk.slice(), loaded => onStreamLoaded(i, loaded)),
+    ),
+  );
+
+  // Média interquartil das amostras agregadas (ignora picos e quedas)
+  if (aggSamples.length >= 4) {
+    const sorted = [...aggSamples].sort((a, b) => a - b);
+    const lo = Math.floor(sorted.length * 0.25);
+    const hi = Math.ceil(sorted.length * 0.75);
+    const mid = sorted.slice(lo, hi);
+    if (mid.length) return mid.reduce((a, b) => a + b, 0) / mid.length;
   }
 
-  try {
-    await runAgainst(CF_UP);
-  } catch (e) {
-    console.warn('[speedtest] Upload CF falhou, usando servidor local:', e.message);
-    await runAgainst('/speedtest/upload?t=' + Date.now());
+  // Fallback: throughput médio pós-warmup
+  const total = streamLoaded.reduce((a, b) => a + b, 0);
+  if (warmupAt && total > warmupBytes) {
+    const elapsed = (performance.now() - warmupAt) / 1000;
+    if (elapsed > 0.2) return ((total - warmupBytes) * 8) / elapsed / 1e6;
   }
-
-  if (todasAmostras.length >= 4) {
-    const sorted = [...todasAmostras].sort((a, b) => b - a);
-    const topN = Math.max(1, Math.ceil(sorted.length * 0.1));
-    const top = sorted.slice(0, topN);
-    return top.reduce((a, b) => a + b, 0) / top.length;
-  }
-  return rates.reduce((a, b) => a + b, 0);
+  const elapsed = (performance.now() - t0) / 1000;
+  return elapsed > 0 ? (total * 8) / elapsed / 1e6 : 0;
 }
 
 export async function iniciarSpeedTest() {

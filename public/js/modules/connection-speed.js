@@ -89,9 +89,9 @@ export function navToVelocidade() {
 export function loadVelocidade() {
   renderSpeedHistory();
   const planSpeed = getPlanSpeed();
-  // Dial até ~1.5× o plano (mín. 400) — deixa o arco chegar perto do fim no limite real do plano
+  // Dial: 100% = velocidade do plano (+15% folga para picos)
   S.gaugeMax = planSpeed
-    ? Math.max(400, Math.ceil((planSpeed * 1.5) / 100) * 100)
+    ? Math.max(300, Math.ceil((planSpeed * 1.15) / 50) * 50)
     : 1000;
   if (planSpeed) {
     document.getElementById('cmp-plano').textContent = `${planSpeed} Mbps`;
@@ -145,11 +145,10 @@ function getPlanSpeed() {
 
 const DIAL_CIRC = 2 * Math.PI * 120; // r=120 no SVG ≈ 753.98
 
-/** Mapeia Mbps → preenchimento do dial (0–1). Sqrt deixa velocidades médias mais legíveis. */
+/** Mbps → preenchimento do dial (0–1), linear em relação ao plano. */
 function rateToGauge(rateMbps) {
   const max = Math.max(S.gaugeMax || 1000, 1);
-  const linear = Math.min(Math.max(rateMbps, 0) / max, 1);
-  return Math.sqrt(linear);
+  return Math.min(Math.max(rateMbps, 0) / max, 1);
 }
 
 function setGauge(pct) {
@@ -171,15 +170,7 @@ function animateSpeed(from, to, duration, onUpdate) {
   requestAnimationFrame(step);
 }
 
-// ── Helpers de medição estável (estilo Speedtest.net) ─────────────────────────
-
-/** Percentil p (0–1) de um array já ordenado ou desordenado. */
-function percentil(arr, p) {
-  if (!arr.length) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const idx = Math.max(0, Math.ceil(sorted.length * p) - 1);
-  return sorted[idx];
-}
+// ── Helpers de medição (CDN Cloudflare — mesma lógica do Fast.com) ────────────
 
 async function medirPing(amostras = 12) {
   // Descarta o primeiro (TCP cold start) e usa mediana + jitter das restantes
@@ -199,32 +190,32 @@ async function medirPing(amostras = 12) {
   return { ping, jitter };
 }
 
-async function medirDownload(onRate) {
-  const STREAMS   = 4;
-  const MB_EACH   = 25;
-  const WARMUP_MS = 2000; // descarta primeiros 2 s (TCP slow start)
-  const SAMPLE_MS = 200;  // janela de amostragem
+/** CDN de alta capacidade (mesmo princípio do Fast.com / Netflix Open Connect). */
+const CF_DOWN = bytes => `https://speed.cloudflare.com/__down?bytes=${bytes}&measId=${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const CF_UP   = 'https://speed.cloudflare.com/__up';
 
-  // Amostras de taxa instantânea (Mbps) pós-warmup
+async function medirDownload(onRate) {
+  // 6 streams × 30 MB na Cloudflare — evita gargalo do VPS do portal
+  const STREAMS   = 6;
+  const BYTES_EACH = 30 * 1024 * 1024;
+  const WARMUP_MS = 1500;
+  const SAMPLE_MS = 150;
+
   const amostras = [];
-  let totalBytes  = 0;
-  let warmupDone  = false;
-  let bytesNoWarmup = 0;
+  let totalBytes = 0;
+  let warmupDone = false;
   const t0 = performance.now();
-  let lastSampleTs    = t0;
+  let lastSampleTs = t0;
   let lastSampleBytes = 0;
 
   function onChunk(size) {
     totalBytes += size;
     const now = performance.now();
-
     if (!warmupDone && now - t0 >= WARMUP_MS) {
-      warmupDone     = true;
-      bytesNoWarmup  = totalBytes;
-      lastSampleTs   = now;
+      warmupDone = true;
+      lastSampleTs = now;
       lastSampleBytes = totalBytes;
     }
-
     const dt = now - lastSampleTs;
     if (dt >= SAMPLE_MS) {
       const rate = ((totalBytes - lastSampleBytes) * 8) / (dt / 1000) / 1e6;
@@ -232,13 +223,14 @@ async function medirDownload(onRate) {
         if (warmupDone) amostras.push(rate);
         onRate(Math.max(0, rate));
       }
-      lastSampleTs    = now;
+      lastSampleTs = now;
       lastSampleBytes = totalBytes;
     }
   }
 
-  async function doStream() {
-    const res = await fetch(`/speedtest/download?mb=${MB_EACH}&t=${Date.now()}`, { cache: 'no-store' });
+  async function doStream(url) {
+    const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
+    if (!res.ok || !res.body) throw new Error('download HTTP ' + res.status);
     const reader = res.body.getReader();
     while (true) {
       const { done, value } = await reader.read();
@@ -247,70 +239,104 @@ async function medirDownload(onRate) {
     }
   }
 
-  await Promise.all(Array.from({ length: STREAMS }, doStream));
+  try {
+    await Promise.all(
+      Array.from({ length: STREAMS }, () => doStream(CF_DOWN(BYTES_EACH))),
+    );
+  } catch (e) {
+    // Fallback: servidor Lemon (pode ser limitado pela egress do VPS)
+    console.warn('[speedtest] Cloudflare falhou, usando servidor local:', e.message);
+    const MB = 25;
+    await Promise.all(
+      Array.from({ length: 4 }, () =>
+        doStream(`/speedtest/download?mb=${MB}&t=${Date.now()}`),
+      ),
+    );
+  }
 
-  // Resultado: percentil 90 das amostras pós-warmup (igual ao Speedtest.net)
-  if (amostras.length >= 4) return percentil(amostras, 0.9);
-  // Fallback: média simples se poucos dados
+  // Média dos 10% melhores amostras (aproxima pico sustentável, estilo Fast.com)
+  if (amostras.length >= 4) {
+    const sorted = [...amostras].sort((a, b) => b - a);
+    const topN = Math.max(1, Math.ceil(sorted.length * 0.1));
+    const top = sorted.slice(0, topN);
+    return top.reduce((a, b) => a + b, 0) / top.length;
+  }
   const elapsed = (performance.now() - t0) / 1000;
-  return (totalBytes * 8) / elapsed / 1e6;
+  return elapsed > 0 ? (totalBytes * 8) / elapsed / 1e6 : 0;
 }
 
-function xhrUploadStream(data, onRate) {
+function xhrUploadStream(url, data, onRate) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const t0 = performance.now();
     let lastLoaded = 0;
     let lastTs = t0;
-    const SAMPLE_MS = 200;
-    const WARMUP_MS = 1500;
-    const amostras  = [];
+    const SAMPLE_MS = 150;
+    const WARMUP_MS = 1200;
+    const amostras = [];
 
     xhr.upload.onprogress = e => {
       const now = performance.now();
-      const dt  = now - lastTs;
+      const dt = now - lastTs;
       if (dt >= SAMPLE_MS && e.loaded > lastLoaded) {
         const rate = ((e.loaded - lastLoaded) * 8) / (dt / 1000) / 1e6;
         if (now - t0 > WARMUP_MS && rate > 0) amostras.push(rate);
         lastLoaded = e.loaded;
-        lastTs     = now;
+        lastTs = now;
         onRate(Math.max(0, rate), amostras);
       }
     };
 
     xhr.onload = () => resolve({
-      bytes:    data.byteLength,
-      elapsed:  (performance.now() - t0) / 1000,
+      bytes: data.byteLength,
+      elapsed: (performance.now() - t0) / 1000,
       amostras,
     });
-    xhr.onerror = reject;
-    xhr.open('POST', '/speedtest/upload?t=' + Date.now());
+    xhr.onerror = () => reject(new Error('upload failed'));
+    xhr.open('POST', url);
     xhr.send(data);
   });
 }
 
 async function medirUpload(onRate) {
-  const STREAMS = 3;
-  const MB_EACH = 12;
-  const chunk   = new Uint8Array(MB_EACH * 1024 * 1024);
-  const rates   = new Array(STREAMS).fill(0);
+  const STREAMS = 4;
+  const MB_EACH = 15;
+  const chunk = new Uint8Array(MB_EACH * 1024 * 1024);
+  const rates = new Array(STREAMS).fill(0);
   const todasAmostras = [];
 
   function onStreamRate(idx, rate, amostras) {
     rates[idx] = rate;
-    todasAmostras.push(...(amostras || []));
+    if (amostras && amostras.length) {
+      // Usa só as amostras novas (não re-empurra a lista inteira a cada progresso)
+      todasAmostras.push(amostras[amostras.length - 1]);
+    }
     onRate(rates.reduce((a, b) => a + b, 0));
   }
 
-  await Promise.all(
-    Array.from({ length: STREAMS }, (_, i) =>
-      xhrUploadStream(chunk.slice(), (rate, am) => onStreamRate(i, rate, am)),
-    ),
-  );
+  async function runAgainst(url) {
+    todasAmostras.length = 0;
+    rates.fill(0);
+    await Promise.all(
+      Array.from({ length: STREAMS }, (_, i) =>
+        xhrUploadStream(url, chunk.slice(), (rate, am) => onStreamRate(i, rate, am)),
+      ),
+    );
+  }
 
-  // Percentil 90 das amostras pós-warmup
-  if (todasAmostras.length >= 4) return percentil(todasAmostras, 0.9);
-  // Fallback: soma das médias por stream
+  try {
+    await runAgainst(CF_UP);
+  } catch (e) {
+    console.warn('[speedtest] Upload CF falhou, usando servidor local:', e.message);
+    await runAgainst('/speedtest/upload?t=' + Date.now());
+  }
+
+  if (todasAmostras.length >= 4) {
+    const sorted = [...todasAmostras].sort((a, b) => b - a);
+    const topN = Math.max(1, Math.ceil(sorted.length * 0.1));
+    const top = sorted.slice(0, topN);
+    return top.reduce((a, b) => a + b, 0) / top.length;
+  }
   return rates.reduce((a, b) => a + b, 0);
 }
 

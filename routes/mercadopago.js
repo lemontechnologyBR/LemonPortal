@@ -8,6 +8,12 @@ const config = require('../lib/config');
 const { sqliteDb } = require('../lib/database');
 const { getJWT, mkGet } = require('../lib/mk-api');
 const {
+  erpAtivo,
+  erpTituloDoCliente,
+  erpBaixarTitulo,
+  erpResolverTituloId,
+} = require('../lib/erp-api');
+const {
   loadClubFaturaDesconto,
   valoresMpPermitidosParaTitulo,
   valorPedidoConferePermitidos,
@@ -109,9 +115,36 @@ function parseValorMkAuth(v) {
   return parseFloat(s);
 }
 
+function idTituloParaErp(titulo, fallbackId) {
+  if (titulo && titulo.id != null && String(titulo.id).trim() !== '') {
+    return String(titulo.id).trim();
+  }
+  if (titulo && titulo.uuid != null && String(titulo.uuid).trim() !== '') {
+    return String(titulo.uuid).trim();
+  }
+  return String(fallbackId || '').trim();
+}
+
 async function mkTituloPertenceAoCliente(tituloId, cliLogin, mkToken) {
   const id = String(tituloId || '').trim();
   if (!id || id.length > 256) return null;
+  if (erpAtivo()) {
+    try {
+      const d = await erpTituloDoCliente(id, cliLogin);
+      if (d) return garantirUuidTituloPayload(d, idTituloParaErp(d, id));
+    } catch (_) {}
+    // UUID/ULID do MK-Auth antigo: tenta achar fatura aberta/vencida do cliente no ERP
+    if (cliLogin && !/^\d+$/.test(id)) {
+      try {
+        const resolved = await erpResolverTituloId({ tituloId: id, login: cliLogin });
+        if (resolved) {
+          const d = await erpTituloDoCliente(resolved, cliLogin);
+          if (d) return garantirUuidTituloPayload(d, idTituloParaErp(d, resolved));
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
   try {
     const r = await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(id)}`, {
       headers: { Authorization: `Bearer ${mkToken}` },
@@ -124,6 +157,38 @@ async function mkTituloPertenceAoCliente(tituloId, cliLogin, mkToken) {
   } catch {
     return null;
   }
+}
+
+async function baixarTituloPago(tituloId, { login, valor, forma }) {
+  if (!erpAtivo()) {
+    const err = new Error('Portal sem ERP_PORTAL_TOKEN — baixa só no ERP, MK-Auth não é gravado');
+    err.status = 503;
+    throw err;
+  }
+  const loginCli = String(login || '').trim();
+  let idErp = String(tituloId || '').trim();
+  try {
+    const resolved = await erpResolverTituloId({
+      tituloId: idErp,
+      login: loginCli,
+      valor,
+    });
+    if (resolved) idErp = resolved;
+  } catch (_) {}
+
+  if (!idErp) {
+    const err = new Error('Título não resolvido no ERP para baixa');
+    err.status = 404;
+    throw err;
+  }
+
+  // Não enviar mpId: o ERP valida no Mercado Pago e falha com token desatualizado ("Payment not found").
+  return erpBaixarTitulo(idErp, {
+    login: loginCli || undefined,
+    valorpag: valor,
+    formapag: forma || 'pix',
+    coletor: 'Mercado Pago',
+  });
 }
 
 async function escolherTituloParaCobrancaRecorrente(cpfLimpo, valorAlvo) {
@@ -274,7 +339,7 @@ async function portalMpPagamentoFatura(req, res) {
           'Mercado Pago (produção) exige webhook em HTTPS. Defina PORTAL_URL com https:// no .env e reinicie o servidor.',
       });
     }
-    const uuidRef = String(tituloUuid).trim();
+    const uuidRef = idTituloParaErp(tituloMk, tituloUuid);
     const mpCust = String(mpCustomerId || '').trim();
     const customerIdDoMk = await mpWalletGetOrCreateCustomer(cli.login, mkCli.data, cli.nome);
 
@@ -307,7 +372,7 @@ async function portalMpPagamentoFatura(req, res) {
       external_reference: uuidRef,
       notification_url: notificationUrl,
       binary_mode: true,
-      metadata: { portal_login: cli.login },
+      metadata: { portal_login: cli.login, titulo_erp_id: uuidRef },
     };
     if (savedPaymentMethodId) {
       payPayload.payment_method_id = savedPaymentMethodId;
@@ -452,11 +517,12 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
 
       // MP exige mínimo ~30 min de expiração para PIX em produção
       const expiraEm = new Date(Date.now() + MP_PIX_EXPIRATION_MIN * 60_000).toISOString();
+      const uuidRef = idTituloParaErp(tituloMk, tituloUuid);
       const payload = {
         transaction_amount: parseFloat(valor),
         description: descricao || `Mensalidade Internet - ${cli.login}`,
         payment_method_id: 'pix',
-        external_reference: tituloUuid,
+        external_reference: uuidRef,
         date_of_expiration: expiraEm,
         notification_url: `${mpPortalOrigin()}/portal/pagamento/webhook`,
         payer: {
@@ -465,13 +531,13 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
           last_name: lastName,
           identification: cpf ? { type: 'CPF', number: cpf } : undefined,
         },
-        metadata: { portal_login: cli.login },
+        metadata: { portal_login: cli.login, titulo_erp_id: uuidRef },
       };
 
       const mpRes = await axios.post(`${MP_BASE}/v1/payments`, payload, {
         headers: {
           Authorization: `Bearer ${MP_TOKEN}`,
-          'X-Idempotency-Key': `${tituloUuid}-${Date.now()}`,
+          'X-Idempotency-Key': `${uuidRef}-${Date.now()}`,
           'Content-Type': 'application/json',
         },
       });
@@ -485,8 +551,8 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
           INSERT OR IGNORE INTO pending_payments (mp_id, login, titulo_uuid, valor, status)
           VALUES (?, ?, ?, ?, 'pending')
         `)
-          .run(String(data.id), cli.login, tituloUuid, parseFloat(valor));
-        console.log(`[MP] Pagamento ${data.id} registrado como pendente para ${cli.login}`);
+          .run(String(data.id), cli.login, uuidRef, parseFloat(valor));
+        console.log(`[MP] Pagamento ${data.id} registrado como pendente para ${cli.login} (titulo ${uuidRef})`);
       } catch (dbErr) {
         console.warn('[MP] Erro ao salvar pendente:', dbErr.message);
       }
@@ -590,7 +656,20 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
       const valor = pag.transaction_amount;
       let tituloUuid;
       try {
-        tituloUuid = await resolverTituloUuidDoPagamentoMp(pag);
+        const loginMeta = String(pag.metadata?.portal_login || '').trim();
+        tituloUuid =
+          String(pag.metadata?.titulo_erp_id || '').trim() ||
+          (await resolverTituloUuidDoPagamentoMp(pag));
+        if (erpAtivo() && loginMeta) {
+          try {
+            const resolved = await erpResolverTituloId({
+              tituloId: tituloUuid,
+              login: loginMeta,
+              valor,
+            });
+            if (resolved) tituloUuid = resolved;
+          } catch (_) {}
+        }
         if (!tituloUuid) {
           console.warn('[MP Webhook] Pagamento aprovado sem título resolvível:', paymentId, pag.external_reference);
           mpLiberarReservaBaixa(paymentId);
@@ -601,29 +680,21 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
         const token = await getJWT();
         let tituloPre = null;
         try {
-          const sr = await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(tituloUuid)}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          tituloPre = sr.data;
+          tituloPre = await mkTituloPertenceAoCliente(tituloUuid, loginMeta, token);
         } catch (_) {}
 
-        const mkRes = await axios.put(
-          `${MK_URL}/titulo/receber`,
-          {
-            uuid: tituloUuid,
-            valor: parseFloat(valor).toFixed(2),
-            forma,
-            coletor: 'Mercado Pago',
-          },
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        const mkRes = await baixarTituloPago(tituloUuid, {
+          login: tituloPre?.login || loginMeta,
+          valor: parseFloat(valor).toFixed(2),
+          forma,
+        });
 
         console.log(
-          `[MP Webhook] ✅ Baixa (${forma}) — Título ${tituloUuid} | R$ ${valor} | MK:`,
-          mkRes.data?.mensagem || mkRes.data?.status,
+          `[MP Webhook] ✅ Baixa (${forma}) — Título ${tituloUuid} | R$ ${valor} | ERP:`,
+          mkRes?.mensagem || mkRes?.status,
         );
 
-        const loginCliente = tituloPre?.login || tituloPre?.dados?.login;
+        const loginCliente = tituloPre?.login || tituloPre?.dados?.login || loginMeta;
         if (loginCliente) {
           const resultado = concederPontosMP(loginCliente, tituloUuid);
           tentarConsumirDescontoClubePosBaixa(
@@ -686,22 +757,17 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
 
       let mkRes;
       try {
-        mkRes = await axios.put(
-          `${MK_URL}/titulo/receber`,
-          {
-            uuid: tituloUuid,
-            valor: valorFinal.toFixed(2),
-            forma,
-            coletor: 'Mercado Pago',
-          },
-          { headers: { Authorization: `Bearer ${mkToken}` } },
-        );
+        mkRes = await baixarTituloPago(idTituloParaErp(tituloMk, tituloUuid), {
+          login: cli.login,
+          valor: valorFinal.toFixed(2),
+          forma,
+        });
       } catch (putErr) {
         mpLiberarReservaBaixa(mpId);
         throw putErr;
       }
 
-      console.log(`[MP Baixa] ✅ Título ${tituloUuid} | R$ ${valorFinal} (${forma}) | ${mkRes.data?.mensagem || 'ok'}`);
+      console.log(`[MP Baixa] ✅ Título ${tituloUuid} | R$ ${valorFinal} (${forma}) | ${mkRes?.mensagem || 'ok'}`);
 
       const loginCliente = req.session?.cliente?.login;
       if (loginCliente) {
@@ -718,7 +784,7 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
         sqliteDb.prepare('DELETE FROM pending_payments WHERE mp_id = ?').run(String(mpId));
       } catch (_) {}
 
-      res.json({ ok: true, mensagem: mkRes.data?.mensagem || 'Baixa realizada com sucesso' });
+      res.json({ ok: true, mensagem: mkRes?.mensagem || 'Baixa realizada com sucesso' });
     } catch (e) {
       const err = e.response?.data;
       console.error('[MP Baixa] Erro:', err || e.message);
@@ -778,23 +844,26 @@ async function processarPagamentoConfirmado(row, pagData, concederPontosMP, noti
   try {
     const mkToken = await getJWT();
     try {
-      const sr = await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(titulo_uuid)}`, {
-        headers: { Authorization: `Bearer ${mkToken}` },
-      });
-      tituloMkPayload = sr.data;
+      tituloMkPayload = await mkTituloPertenceAoCliente(titulo_uuid, login, mkToken);
     } catch (_) {}
 
-    await axios.put(
-      `${MK_URL}/titulo/receber`,
-      {
-        uuid: titulo_uuid,
-        valor: valorBaixa,
-        forma,
-        coletor: 'Mercado Pago',
-      },
-      { headers: { Authorization: `Bearer ${mkToken}` } },
-    );
-    console.log(`[JOB MP] Baixa MK-Auth OK (${forma}) para uuid ${titulo_uuid}`);
+    let tituloIdBaixa = titulo_uuid;
+    if (erpAtivo()) {
+      try {
+        const resolved = await erpResolverTituloId({
+          tituloId: titulo_uuid,
+          login,
+          valor: valorBaixa,
+        });
+        if (resolved) tituloIdBaixa = resolved;
+      } catch (_) {}
+    }
+    await baixarTituloPago(tituloIdBaixa, {
+      login,
+      valor: valorBaixa,
+      forma,
+    });
+    console.log(`[JOB MP] Baixa ERP OK (${forma}) para titulo ${tituloIdBaixa}`);
   } catch (e) {
     mpLiberarReservaBaixa(mp_id);
     console.warn(`[JOB MP] ⚠️ Falha baixa MK-Auth:`, e.response?.data || e.message);

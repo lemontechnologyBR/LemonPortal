@@ -3,6 +3,7 @@ const axios = require('axios');
 const { requireAuth } = require('../lib/auth');
 const config = require('../lib/config');
 const { getJWT } = require('../lib/mk-api');
+const { erpAtivo, erpTitulos, erpTitulo } = require('../lib/erp-api');
 const { enrichClienteComVelocidadePlano } = require('../lib/plano-match');
 const pushLib = require('../lib/push');
 const { mergePrefs, getPrefsForLogin } = require('../lib/push-notif-prefs');
@@ -165,14 +166,19 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/abertas', requireAuth, async (req, res) => {
     try {
-      const token = await getJWT();
-      const cpf = req.session.cliente.cpf_cnpj || req.session.cliente.login;
-      const r = await axios.get(`${MK_URL}/titulo/aberto/${cpf}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       const login = req.session.cliente.login;
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
-      let body = aplicarJurosAtrasoListaBody(r.data);
+      let raw;
+      if (erpAtivo()) {
+        raw = await erpTitulos({ login, status: 'aberto' });
+      } else {
+        const token = await getJWT();
+        const cpf = req.session.cliente.cpf_cnpj || req.session.cliente.login;
+        raw = (await axios.get(`${MK_URL}/titulo/aberto/${cpf}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })).data;
+      }
+      let body = aplicarJurosAtrasoListaBody(raw);
       body = await enriquecerListaFaturasClubePosReconciliar(
         body, login,
         cpfLimpo.length >= 11 ? cpfLimpo : '',
@@ -186,14 +192,19 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/vencidas', requireAuth, async (req, res) => {
     try {
-      const token = await getJWT();
-      const cpf = req.session.cliente.cpf_cnpj || req.session.cliente.login;
-      const r = await axios.get(`${MK_URL}/titulo/vencido/${cpf}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       const login = req.session.cliente.login;
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
-      let body = aplicarJurosAtrasoListaBody(r.data);
+      let raw;
+      if (erpAtivo()) {
+        raw = await erpTitulos({ login, status: 'vencido' });
+      } else {
+        const token = await getJWT();
+        const cpf = req.session.cliente.cpf_cnpj || req.session.cliente.login;
+        raw = (await axios.get(`${MK_URL}/titulo/vencido/${cpf}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })).data;
+      }
+      let body = aplicarJurosAtrasoListaBody(raw);
       body = await enriquecerListaFaturasClubePosReconciliar(
         body, login,
         cpfLimpo.length >= 11 ? cpfLimpo : '',
@@ -207,15 +218,19 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/pagas', requireAuth, async (req, res) => {
     try {
-      const token = await getJWT();
       const login = req.session.cliente.login;
-      const r = await axios.get(`${MK_URL}/titulo/pago/${login}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
-      // Faturas pagas não precisam de cálculo de juros — pulamos aplicarJurosAtrasoListaBody.
+      let raw;
+      if (erpAtivo()) {
+        raw = await erpTitulos({ login, status: 'pago' });
+      } else {
+        const token = await getJWT();
+        raw = (await axios.get(`${MK_URL}/titulo/pago/${login}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })).data;
+      }
       const body = await enriquecerListaFaturasClubePosReconciliar(
-        r.data, login,
+        raw, login,
         cpfLimpo.length >= 11 ? cpfLimpo : '',
         require('../lib/mk-api').mkGet,
       );
@@ -227,14 +242,19 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/:uuid', requireAuth, async (req, res) => {
     try {
-      const token = await getJWT();
       const urlTitulo = String(req.params.uuid || '').trim();
-      const r = await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(urlTitulo)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       const login = req.session.cliente.login;
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
-      let body = garantirUuidTituloPayload(r.data, urlTitulo);
+      let raw;
+      if (erpAtivo()) {
+        raw = await erpTitulo(urlTitulo, { login });
+      } else {
+        const token = await getJWT();
+        raw = (await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(urlTitulo)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })).data;
+      }
+      let body = garantirUuidTituloPayload(raw, urlTitulo);
       body = aplicarJurosAtrasoTitulo(body);
       body = await enriquecerTituloComDescontoClubePosReconciliar(
         body, login,

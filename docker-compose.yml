@@ -31,6 +31,8 @@ services:
       - MP_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET}
       - MP_PIX_EXPIRATION_MIN=${MP_PIX_EXPIRATION_MIN:-30}
       - PORTAL_URL=${PORTAL_URL}
+      - ERP_URL=${ERP_URL:-https://erp.lemontech.cloud}
+      - ERP_PORTAL_TOKEN=${ERP_PORTAL_TOKEN}
       - EVO_URL=${EVO_URL}
       - EVO_INSTANCE=${EVO_INSTANCE}
       - EVO_APIKEY=${EVO_APIKEY}

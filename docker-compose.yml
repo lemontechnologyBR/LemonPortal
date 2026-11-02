@@ -31,6 +31,7 @@ services:
       - MP_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET}
       - MP_PIX_EXPIRATION_MIN=${MP_PIX_EXPIRATION_MIN:-30}
       - PORTAL_URL=${PORTAL_URL}
+      # Baixa de título só no ERP. Sem token o PIX não grava MK-Auth.
       - ERP_URL=${ERP_URL:-https://erp.lemontech.cloud}
       - ERP_PORTAL_TOKEN=${ERP_PORTAL_TOKEN}
       - EVO_URL=${EVO_URL}

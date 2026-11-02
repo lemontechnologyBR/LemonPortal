@@ -9,9 +9,12 @@ const { sqliteDb } = require('../lib/database');
 const { getJWT, mkGet } = require('../lib/mk-api');
 const {
   erpAtivo,
+  erpCliente,
+  erpTitulos,
   erpTituloDoCliente,
   erpBaixarTitulo,
   erpResolverTituloId,
+  loginIgual,
 } = require('../lib/erp-api');
 const {
   loadClubFaturaDesconto,
@@ -152,7 +155,7 @@ async function mkTituloPertenceAoCliente(tituloId, cliLogin, mkToken) {
     const d = r.data;
     const loginTitulo = d?.login ?? d?.dados?.login;
     if (loginTitulo == null) return null;
-    if (String(loginTitulo).toLowerCase() !== String(cliLogin).toLowerCase()) return null;
+    if (!loginIgual(loginTitulo, cliLogin)) return null;
     return garantirUuidTituloPayload(d, id);
   } catch {
     return null;
@@ -195,22 +198,49 @@ async function escolherTituloParaCobrancaRecorrente(cpfLimpo, valorAlvo) {
   if (!cpfLimpo) return null;
   const v = parseFloat(valorAlvo);
   let lista = [];
-  try {
-    const ab = await mkGet(`titulo/aberto/${cpfLimpo}`);
-    lista = lista.concat(ab.titulos || []);
-  } catch {}
-  try {
-    const ve = await mkGet(`titulo/vencido/${cpfLimpo}`);
-    lista = lista.concat(ve.titulos || []);
-  } catch {}
+  if (erpAtivo()) {
+    try {
+      const cli = await erpCliente({ cpf: cpfLimpo });
+      const login = String(cli?.login || '').trim();
+      if (login) {
+        const resolved = await erpResolverTituloId({ login, valor: valorAlvo });
+        if (resolved) return resolved;
+        const raw = await erpTitulos({ login });
+        lista = lista.concat(raw?.titulos || []);
+      }
+    } catch (_) {}
+  } else {
+    try {
+      const ab = await mkGet(`titulo/aberto/${cpfLimpo}`);
+      lista = lista.concat(ab.titulos || []);
+    } catch {}
+    try {
+      const ve = await mkGet(`titulo/vencido/${cpfLimpo}`);
+      lista = lista.concat(ve.titulos || []);
+    } catch {}
+  }
   for (const t of lista) {
-    if (!t?.uuid) continue;
+    const chave = t?.id || t?.uuid;
+    if (!chave) continue;
     const tv = parseFloat(t.valor);
-    if (!Number.isNaN(v) && !Number.isNaN(tv) && Math.abs(tv - v) < 0.02) return t.uuid;
+    if (!Number.isNaN(v) && !Number.isNaN(tv) && Math.abs(tv - v) < 0.02) return String(chave);
   }
   lista.sort((a, b) => new Date(a.datavenc || 0) - new Date(b.datavenc || 0));
-  const first = lista.find(t => t?.uuid);
-  return first ? first.uuid : null;
+  const first = lista.find(t => t?.id || t?.uuid);
+  return first ? String(first.id || first.uuid) : null;
+}
+
+async function cpfDoClienteSessao(cli) {
+  const daSessao = String(cli?.cpf_cnpj || '').replace(/\D/g, '');
+  if (daSessao.length >= 11) return daSessao;
+  if (erpAtivo()) {
+    try {
+      const erp = await erpCliente({ login: String(cli?.login || '').trim() });
+      const doc = String(erp?.cpf_cnpj || '').replace(/\D/g, '');
+      if (doc.length >= 11) return doc;
+    } catch (_) {}
+  }
+  return '';
 }
 
 async function resolverTituloUuidDoPagamentoMp(pag) {
@@ -290,11 +320,9 @@ async function portalMpPagamentoFatura(req, res) {
   }
 
   try {
-    const token = await getJWT();
-    const mkCli = await axios.get(`${MK_URL}/cliente/show/${cli.login}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const cpfRaw = (mkCli.data.cpf_cnpj || '').replace(/\D/g, '');
+    let token = null;
+    if (!erpAtivo()) token = await getJWT();
+    const cpfRaw = await cpfDoClienteSessao(cli);
     if (!cpfRaw || cpfRaw.length < 11) {
       return res.status(400).json({
         error: 'CPF não encontrado no cadastro. Atualize seus dados para pagar com cartão.',
@@ -307,10 +335,10 @@ async function portalMpPagamentoFatura(req, res) {
     const tokenStr = String(MP_TOKEN || '').trim();
     const isTestToken = tokenStr.startsWith('TEST-');
 
-    let tituloMk = await mkTituloPertenceAoCliente(tituloUuid, cli.login, token);
+    let tituloMk = await mkTituloPertenceAoCliente(tituloUuid, String(cli.login || '').trim(), token);
     if (!tituloMk) {
       return res.status(400).json({
-        error: 'Fatura não encontrada no MK-Auth ou não pertence à sua conta.',
+        error: 'Fatura não encontrada ou não pertence à sua conta.',
       });
     }
     tituloMk = aplicarJurosAtrasoTitulo({ ...tituloMk });
@@ -341,7 +369,11 @@ async function portalMpPagamentoFatura(req, res) {
     }
     const uuidRef = idTituloParaErp(tituloMk, tituloUuid);
     const mpCust = String(mpCustomerId || '').trim();
-    const customerIdDoMk = await mpWalletGetOrCreateCustomer(cli.login, mkCli.data, cli.nome);
+    const customerIdDoMk = await mpWalletGetOrCreateCustomer(cli.login, {
+      nome: cli.nome,
+      email: cli.email,
+      cpf_cnpj: cpfRaw,
+    }, cli.nome);
 
     let payerPayload;
     let savedPaymentMethodId = null;
@@ -482,16 +514,13 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
     if (!tituloUuid || !valor) return res.status(400).json({ error: 'Dados obrigatórios: tituloUuid, valor' });
 
     try {
-      const token = await getJWT();
-      const rawT = await mkTituloPertenceAoCliente(tituloUuid, cli.login, token);
+      const token = erpAtivo() ? null : await getJWT();
+      const rawT = await mkTituloPertenceAoCliente(tituloUuid, String(cli.login || '').trim(), token);
       if (!rawT) {
-        return res.status(400).json({ error: 'Fatura não encontrada no MK-Auth ou não pertence à sua conta.' });
+        return res.status(400).json({ error: 'Fatura não encontrada ou não pertence à sua conta.' });
       }
       const tituloMk = aplicarJurosAtrasoTitulo({ ...rawT });
-      const mkCli = await axios.get(`${MK_URL}/cliente/show/${cli.login}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const cpf = (mkCli.data.cpf_cnpj || '').replace(/\D/g, '');
+      const cpf = await cpfDoClienteSessao(cli);
       try {
         if (cpf.length >= 11) await reconciliarPendenteDescontoClube(cli.login, cpf, mkGet);
       } catch (_) {}
@@ -593,8 +622,8 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
       const metaLogin = pag.metadata?.portal_login;
       const pending = sqliteDb.prepare('SELECT login FROM pending_payments WHERE mp_id = ?').get(mpId);
       const podeVer =
-        (metaLogin && String(metaLogin).toLowerCase() === String(cli.login).toLowerCase()) ||
-        (pending && pending.login === cli.login);
+        (metaLogin && loginIgual(metaLogin, cli.login)) ||
+        (pending && loginIgual(pending.login, cli.login));
       if (!podeVer) {
         return res.status(403).json({ error: 'Pagamento não encontrado ou acesso negado.' });
       }
@@ -677,10 +706,9 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
         }
 
         const forma = mpFormaPagamentoDaTransacao(pag);
-        const token = await getJWT();
         let tituloPre = null;
         try {
-          tituloPre = await mkTituloPertenceAoCliente(tituloUuid, loginMeta, token);
+          tituloPre = await mkTituloPertenceAoCliente(tituloUuid, loginMeta, erpAtivo() ? null : await getJWT());
         } catch (_) {}
 
         const mkRes = await baixarTituloPago(tituloUuid, {
@@ -723,8 +751,8 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
     if (!mpId || !tituloUuid) return res.status(400).json({ error: 'mpId e tituloUuid obrigatórios' });
 
     try {
-      const mkToken = await getJWT();
-      const tituloMk = await mkTituloPertenceAoCliente(tituloUuid, cli.login, mkToken);
+      const mkToken = erpAtivo() ? null : await getJWT();
+      const tituloMk = await mkTituloPertenceAoCliente(tituloUuid, String(cli.login || '').trim(), mkToken);
       if (!tituloMk) {
         return res.status(403).json({ error: 'Fatura não encontrada ou não pertence à sua conta.' });
       }
@@ -741,8 +769,8 @@ function registerMercadoPagoRoutes(app, { requireAuth, concederPontosMP, notific
       const metaLogin = pag.metadata?.portal_login;
       const pending = sqliteDb.prepare('SELECT login FROM pending_payments WHERE mp_id = ?').get(String(mpId));
       const pagamentoDoCliente =
-        (pending && pending.login === cli.login) ||
-        (metaLogin && String(metaLogin).toLowerCase() === String(cli.login).toLowerCase()) ||
+        (pending && loginIgual(pending.login, cli.login)) ||
+        (metaLogin && loginIgual(metaLogin, cli.login)) ||
         (ref === String(tituloUuid).trim());
       if (!pagamentoDoCliente) {
         return res.status(403).json({ error: 'Pagamento não vinculado à sua sessão.' });
@@ -842,9 +870,8 @@ async function processarPagamentoConfirmado(row, pagData, concederPontosMP, noti
   let tituloMkPayload = null;
 
   try {
-    const mkToken = await getJWT();
     try {
-      tituloMkPayload = await mkTituloPertenceAoCliente(titulo_uuid, login, mkToken);
+      tituloMkPayload = await mkTituloPertenceAoCliente(titulo_uuid, login, erpAtivo() ? null : await getJWT());
     } catch (_) {}
 
     let tituloIdBaixa = titulo_uuid;
@@ -866,7 +893,7 @@ async function processarPagamentoConfirmado(row, pagData, concederPontosMP, noti
     console.log(`[JOB MP] Baixa ERP OK (${forma}) para titulo ${tituloIdBaixa}`);
   } catch (e) {
     mpLiberarReservaBaixa(mp_id);
-    console.warn(`[JOB MP] ⚠️ Falha baixa MK-Auth:`, e.response?.data || e.message);
+    console.warn(`[JOB MP] ⚠️ Falha baixa ERP:`, e.response?.data || e.message);
     try {
       sqliteDb.prepare(`UPDATE pending_payments SET status='pending', updated_at=datetime('now') WHERE mp_id=?`).run(mp_id);
     } catch (_) {}

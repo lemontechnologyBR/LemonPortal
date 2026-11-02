@@ -3,7 +3,16 @@ const axios = require('axios');
 const { requireAuth } = require('../lib/auth');
 const config = require('../lib/config');
 const { getJWT } = require('../lib/mk-api');
-const { erpAtivo, erpTitulos, erpTitulo } = require('../lib/erp-api');
+const {
+  erpAtivo,
+  erpCliente,
+  erpAtualizarCliente,
+  erpTitulos,
+  erpTitulo,
+  erpResolverTituloId,
+  normalizarTituloPortal,
+  normalizarListaTitulos,
+} = require('../lib/erp-api');
 const { enrichClienteComVelocidadePlano } = require('../lib/plano-match');
 const pushLib = require('../lib/push');
 const { mergePrefs, getPrefsForLogin } = require('../lib/push-notif-prefs');
@@ -41,24 +50,22 @@ function registerPortalRoutes(app) {
     }
     const cpfLimpo = cpf.replace(/\D/g, '');
     try {
-      const token = await getJWT();
-      const clienteRes = await axios.get(`${MK_URL}/cliente/show/${cpfLimpo}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const cliente = clienteRes.data;
-
+      if (!erpAtivo()) {
+        return res.status(503).json({ error: 'Portal sem ERP. Login não usa mais o MK-Auth.' });
+      }
+      const cliente = await erpCliente({ cpf: cpfLimpo });
       if (!cliente || !cliente.login) {
         return res.status(404).json({ error: 'CPF não encontrado. Verifique e tente novamente.' });
       }
       req.session.cliente = {
-        login: cliente.login,
+        login: String(cliente.login || '').trim(),
         nome: cliente.nome,
         email: cliente.email,
         cpf_cnpj: cliente.cpf_cnpj,
-        uuid: cliente.uuid_cliente || cliente.uuid,
-        plano: cliente.plano || cliente.plano_nome || cliente.nome_plano || '',
+        uuid: cliente.uuid,
+        plano: cliente.plano || '',
+        celular: cliente.celular || '',
       };
-      req.session.token = token;
 
       const db = getClientData(cliente.login);
       const c  = db[cliente.login];
@@ -83,7 +90,7 @@ function registerPortalRoutes(app) {
 
       res.json({ success: true, nome: cliente.nome, primeiroAcesso: isFirst });
     } catch (err) {
-      const msg = err.response?.data?.mensagem || err.response?.data?.message || 'Erro ao autenticar.';
+      const msg = err.response?.data?.error || err.response?.data?.mensagem || err.response?.data?.message || 'Erro ao autenticar.';
       res.status(err.response?.status || 500).json({ error: msg });
     }
   });
@@ -98,14 +105,15 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/me', requireAuth, async (req, res) => {
     try {
-      const token = await getJWT();
-      const r = await axios.get(`${MK_URL}/cliente/show/${req.session.cliente.login}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const cliente = await enrichClienteComVelocidadePlano(r.data);
-      res.json(cliente);
+      if (!erpAtivo()) {
+        return res.status(503).json({ error: 'Portal sem ERP. Cadastro não usa mais o MK-Auth.' });
+      }
+      const login = String(req.session.cliente.login || '').trim();
+      const cliente = await erpCliente({ login });
+      if (!cliente) return res.status(404).json({ error: 'Cliente não encontrado.' });
+      res.json(await enrichClienteComVelocidadePlano(cliente));
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao buscar dados do cliente.' });
+      res.status(err.status || 500).json({ error: err.response?.data?.error || 'Erro ao buscar dados do cliente.' });
     }
   });
 
@@ -114,51 +122,18 @@ function registerPortalRoutes(app) {
   app.put('/portal/perfil', requireAuth, async (req, res) => {
     const { email, telefone, celular, endereco, numero, bairro, cidade, estado, cep, complemento } = req.body;
     const cliente = req.session.cliente;
-
     try {
-      const token = await getJWT();
-      const editRes = await axios.put(`${MK_URL}/cliente/editar`, {
-        uuid: cliente.uuid,
-        email, telefone, celular, endereco, numero, bairro, cidade, estado, cep, complemento
-      }, { headers: { Authorization: `Bearer ${token}` } });
-
-      const body = editRes.data;
-      if (body?.error) throw new Error(body.error?.text || 'Permissão negada');
-
-      return res.json({ success: true, modo: 'direto' });
-    } catch (errEdit) {
-      try {
-        const token = await getJWT();
-        const linhas = [
-          `📋 Solicitação de atualização de cadastro`,
-          ``,
-          email       ? `E-mail: ${email}`               : null,
-          telefone    ? `Telefone: ${telefone}`           : null,
-          celular     ? `Celular: ${celular}`             : null,
-          endereco    ? `Endereço: ${endereco}, ${numero}` : null,
-          complemento ? `Complemento: ${complemento}`    : null,
-          bairro      ? `Bairro: ${bairro}`              : null,
-          cidade      ? `Cidade: ${cidade} - ${estado}`  : null,
-          cep         ? `CEP: ${cep}`                    : null,
-        ].filter(Boolean).join('\n');
-
-        await axios.post(`${MK_URL}/chamado/inserir`, {
-          login: cliente.login,
-          nome: cliente.nome,
-          email: cliente.email,
-          assunto: 'Cadastro',
-          prioridade: 'normal',
-          mensagem: linhas
-        }, { headers: { Authorization: `Bearer ${token}` } });
-
-        return res.json({
-          success: true,
-          modo: 'chamado',
-          aviso: 'Sua solicitação foi enviada como chamado. Nossa equipe irá atualizar seus dados em breve.'
-        });
-      } catch (errChamado) {
-        return res.status(500).json({ error: 'Não foi possível salvar as alterações. Tente novamente.' });
+      if (!erpAtivo()) {
+        return res.status(503).json({ error: 'Portal sem ERP. Cadastro não usa mais o MK-Auth.' });
       }
+      const atualizado = await erpAtualizarCliente(
+        { login: String(cliente.login || '').trim() },
+        { email, telefone, celular, endereco, numero, bairro, cidade, estado, cep, complemento }
+      );
+      if (atualizado?.email) req.session.cliente.email = atualizado.email;
+      return res.json({ success: true, modo: 'direto', cliente: atualizado });
+    } catch (err) {
+      return res.status(err.status || 500).json({ error: err.response?.data?.error || 'Não foi possível salvar as alterações. Tente novamente.' });
     }
   });
 
@@ -166,11 +141,11 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/abertas', requireAuth, async (req, res) => {
     try {
-      const login = req.session.cliente.login;
+      const login = String(req.session.cliente.login || '').trim();
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
       let raw;
       if (erpAtivo()) {
-        raw = await erpTitulos({ login, status: 'aberto' });
+        raw = normalizarListaTitulos(await erpTitulos({ login, status: 'aberto' }));
       } else {
         const token = await getJWT();
         const cpf = req.session.cliente.cpf_cnpj || req.session.cliente.login;
@@ -192,11 +167,11 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/vencidas', requireAuth, async (req, res) => {
     try {
-      const login = req.session.cliente.login;
+      const login = String(req.session.cliente.login || '').trim();
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
       let raw;
       if (erpAtivo()) {
-        raw = await erpTitulos({ login, status: 'vencido' });
+        raw = normalizarListaTitulos(await erpTitulos({ login, status: 'vencido' }));
       } else {
         const token = await getJWT();
         const cpf = req.session.cliente.cpf_cnpj || req.session.cliente.login;
@@ -218,11 +193,11 @@ function registerPortalRoutes(app) {
 
   app.get('/portal/faturas/pagas', requireAuth, async (req, res) => {
     try {
-      const login = req.session.cliente.login;
+      const login = String(req.session.cliente.login || '').trim();
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
       let raw;
       if (erpAtivo()) {
-        raw = await erpTitulos({ login, status: 'pago' });
+        raw = normalizarListaTitulos(await erpTitulos({ login, status: 'pago' }));
       } else {
         const token = await getJWT();
         raw = (await axios.get(`${MK_URL}/titulo/pago/${login}`, {
@@ -243,11 +218,21 @@ function registerPortalRoutes(app) {
   app.get('/portal/faturas/:uuid', requireAuth, async (req, res) => {
     try {
       const urlTitulo = String(req.params.uuid || '').trim();
-      const login = req.session.cliente.login;
+      const login = String(req.session.cliente.login || '').trim();
       const cpfLimpo = String(req.session.cliente.cpf_cnpj || '').replace(/\D/g, '');
       let raw;
       if (erpAtivo()) {
-        raw = await erpTitulo(urlTitulo, { login });
+        try {
+          raw = await erpTitulo(urlTitulo, { login });
+        } catch (_) {
+          raw = null;
+        }
+        if (!raw || !(raw.id || raw.uuid)) {
+          const resolved = await erpResolverTituloId({ tituloId: urlTitulo, login });
+          raw = resolved ? await erpTitulo(resolved, { login }) : null;
+        }
+        if (!raw) return res.status(404).json({ error: 'Fatura não encontrada.' });
+        raw = normalizarTituloPortal(raw);
       } else {
         const token = await getJWT();
         raw = (await axios.get(`${MK_URL}/titulo/show/${encodeURIComponent(urlTitulo)}`, {
